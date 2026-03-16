@@ -447,8 +447,8 @@ skills/local-context-bridge/
 ```json
 {
   "id": "local-context-bridge",
-  "name": "Local ContextBridge",
-  "version": "1.0.0",
+  "name": "Local Document Search (Privacy-First)",
+  "version": "1.0.4",
   "description": "...",
   "capabilities": [
     {

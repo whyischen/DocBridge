@@ -527,4 +527,4 @@ The skill operates with user permissions only:
 
 ## Version History
 
-- **1.0.0** (2024-01-15): Initial security documentation
+- **1.0.4** (2024-01-16): Centralized version management in `version.py`

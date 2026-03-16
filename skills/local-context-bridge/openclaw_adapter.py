@@ -14,6 +14,7 @@ from typing import Dict, Any, Optional, List
 from enum import Enum
 
 from .skill import LocalContextBridgeSkill
+from .version import __version__
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -53,9 +54,9 @@ class OpenClawAdapter:
         """
         return {
             "id": "local-context-bridge",
-            "name": "Local ContextBridge",
-            "version": "1.0.0",
-            "description": "Local document search and context management for AI agents",
+            "name": "Local Document Search (Privacy-First)",
+            "version": __version__,
+            "description": "Local document search, privacy-first. Index and search Word, Excel, PDF, Markdown files without uploading to external services.",
             "author": "whyischen",
             "license": "MIT",
             "capabilities": [

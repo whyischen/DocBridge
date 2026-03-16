@@ -1,9 +1,9 @@
 {
   "name": "local-context-bridge",
-  "displayName": "Local ContextBridge",
+  "displayName": "Local Document Search (Privacy-First)",
   "id": "local-context-bridge",
-  "version": "1.0.2",
-  "description": "Local document search and context management for AI agents. Search Word, Excel, PDF files instantly without uploading.",
+  "version": "1.0.4",
+  "description": "Local document search, privacy-first. Index and search Word, Excel, PDF, Markdown files without uploading to external services.",
   "author": "whyischen",
   "license": "MIT",
   "main": "skill.py",

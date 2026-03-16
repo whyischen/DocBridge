@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Optional
 from .setup import ContextBridgeSetup
 from .environment import EnvironmentDetector
 from .core_api_contract import CoreAPIContract, SearchResult, Config
+from .version import __version__
 
 
 class LocalContextBridgeSkill:
@@ -24,9 +25,9 @@ class LocalContextBridgeSkill:
         return {
             "id": "local-context-bridge",
             "name": "local-context-bridge",
-            "displayName": "Local ContextBridge",
-            "version": "1.0.0",
-            "description": "Local document search and context management for AI agents",
+            "displayName": "Local Document Search (Privacy-First)",
+            "version": __version__,
+            "description": "Local document search, privacy-first. Index and search Word, Excel, PDF, Markdown files without uploading to external services.",
             "author": "whyischen",
             "license": "MIT",
             "capabilities": [

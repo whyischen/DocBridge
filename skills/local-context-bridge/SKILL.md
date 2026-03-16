@@ -1,11 +1,11 @@
-# Local ContextBridge Skill - Complete Guide
+# Local Document Search (Privacy-First) Skill - Complete Guide
 
 ## Overview
 
-**Local ContextBridge** is an OpenClaw Skill that provides local document search and context management capabilities for AI agents. It enables intelligent searching through Word, Excel, PDF, and Markdown files without uploading documents to external services.
+**Local Document Search** is an OpenClaw Skill that provides local document indexing and search capabilities for AI agents. It enables intelligent searching through Word, Excel, PDF, and Markdown files without uploading documents to external services.
 
 **Skill ID**: `local-context-bridge`  
-**Version**: 1.0.0  
+**Version**: 1.0.4  
 **Author**: whyischen  
 **License**: MIT
 
@@ -177,8 +177,8 @@ setup_result = skill.setup_environment(mode='embedded')
   "message": "Skill initialized successfully",
   "metadata": {
     "name": "local-context-bridge",
-    "displayName": "Local ContextBridge",
-    "version": "1.0.0",
+    "displayName": "Local Document Search (Privacy-First)",
+    "version": "1.0.4",
     "capabilities": [...]
   }
 }
@@ -428,9 +428,9 @@ Get skill metadata and capabilities.
 ```json
 {
   "name": "local-context-bridge",
-  "displayName": "Local ContextBridge",
-  "version": "1.0.0",
-  "description": "Local document search and context management for AI agents",
+  "displayName": "Local Document Search (Privacy-First)",
+  "version": "1.0.4",
+  "description": "Local document search, privacy-first. Index and search Word, Excel, PDF, Markdown files without uploading to external services.",
   "capabilities": [
     "search_documents",
     "setup_environment",
@@ -1055,7 +1055,15 @@ MIT License - See LICENSE file for details
 
 ## Changelog
 
-### Version 1.0.0 (Current)
+### Version 1.0.4 (Current)
+- Centralized version management: all version numbers now read from `version.py`
+- Future version updates only require changing one file
+
+### Version 1.0.3
+- Updated skill name and description for clarity: "Local Document Search (Privacy-First)"
+- Unified version numbers across all files (manifest, code, documentation)
+- Improved metadata consistency
+- Enhanced privacy-first messaging
 - Initial release
 - OpenClaw integration
 - Auto environment detection
