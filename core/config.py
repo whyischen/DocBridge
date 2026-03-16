@@ -7,15 +7,19 @@ CONFIG_PATH = Path("config.yaml")
 def load_config():
     if CONFIG_PATH.exists():
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
-    return {"mode": "embedded"}
+            config = yaml.safe_load(f) or {}
+            # Ensure language defaults to English if not specified
+            if "language" not in config:
+                config["language"] = "en"
+            return config
+    return {"mode": "embedded", "language": "en"}
 
 def save_config(config_data):
     with open(CONFIG_PATH, "w", encoding="utf-8") as f:
         yaml.safe_dump(config_data, f, default_flow_style=False)
 
 CONFIG = load_config()
-WORKSPACE_DIR = Path(os.path.expanduser(CONFIG.get("workspace_dir", "~/ContextBridge_Workspace")))
+WORKSPACE_DIR = Path(os.path.expanduser(CONFIG.get("workspace_dir", "~/.cbridge/workspace")))
 RAW_DOCS_DIR = WORKSPACE_DIR / "raw_docs"
 PARSED_DOCS_DIR = WORKSPACE_DIR / "parsed_docs"
 
@@ -90,7 +94,7 @@ def auto_configure(workspace_dir=None):
     # 生成配置
     config_data = {
         "mode": "external" if (services.get("qmd_available") and services.get("openviking_available")) else "embedded",
-        "workspace_dir": workspace_dir or str(Path.home() / "ContextBridge_Workspace"),
+        "workspace_dir": workspace_dir or str(Path.home() / ".cbridge" / "workspace"),
         "watch_dirs": [],
     }
     

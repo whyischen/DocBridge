@@ -19,14 +19,25 @@ class QMDRuntime(ISearchRuntime):
             ensure_chroma_model()
             
             import chromadb
+            from chromadb.config import Settings
             import os
             from pathlib import Path
             
-            workspace_dir = Path(os.path.expanduser(config.get("workspace_dir", "~/ContextBridge_Workspace")))
+            workspace_dir = Path(os.path.expanduser(config.get("workspace_dir", "~/.cbridge/workspace")))
             db_path = workspace_dir / "qmd_embedded"
             db_path.mkdir(parents=True, exist_ok=True)
             
-            self.client = chromadb.PersistentClient(path=str(db_path))
+            # Configure ChromaDB to use our custom models directory
+            models_dir = Path.home() / ".cbridge" / "models"
+            
+            # Use new Chroma client initialization with Settings
+            settings = Settings(
+                is_persistent=True,
+                persist_directory=str(db_path),
+                anonymized_telemetry=False,
+            )
+            
+            self.client = chromadb.Client(settings)
             self.collection = self.client.get_or_create_collection(name=self.collection_name)
         else:
             console.print(t("qmd_init_ext", endpoint=self.endpoint, collection=self.collection_name))

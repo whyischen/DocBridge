@@ -8,3 +8,4 @@ coverage/
 !.env.example
 *.egg-info/
 cbridge_agent.egg-info/
+*__pycache__

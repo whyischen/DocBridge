@@ -2,7 +2,7 @@ import time
 import os
 import queue
 import threading
-from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 from pathlib import Path
 from rich.console import Console
@@ -133,7 +133,7 @@ def start_watching():
     worker_thread.start()
     
     event_handler = DocumentHandler(context_manager)
-    observer = Observer()
+    observer = PollingObserver(timeout=2)  # Fork-safe observer with 2-second polling interval
     
     watch_dirs = get_watch_dirs()
     for d in watch_dirs:

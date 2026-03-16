@@ -31,6 +31,9 @@ MESSAGES = {
         "start_engine": "[bold green]🚀 正在启动 ContextBridge 核心引擎...[/bold green]",
         "serve_desc": "启动 ContextBridge API 服务供 AI Agent 调用",
         "serve_start": "[bold cyan]🚀 正在启动 ContextBridge API 服务 (http://{host}:{port})...[/bold cyan]",
+        "serve_daemon_start": "[bold green]✓[/bold green] ContextBridge 已在后台启动 (PID: {pid})",
+        "serve_daemon_url": "[cyan]访问地址: http://{host}:{port}[/cyan]",
+        "serve_daemon_hint": "[dim]日志保存至: ~/.cbridge/logs/cbridge-serve.log[/dim]",
         "search_desc": "在知识库中进行语义检索",
         "search_empty": "[yellow]📭 未找到相关结果。[/yellow]",
         "search_results_title": "\n[bold cyan]🔍 检索结果: '{query}'[/bold cyan]\n" + "="*40,
@@ -127,6 +130,9 @@ MESSAGES = {
         "start_engine": "[bold green]🚀 Starting ContextBridge core engine...[/bold green]",
         "serve_desc": "Start ContextBridge API service for AI Agents",
         "serve_start": "[bold cyan]🚀 Starting ContextBridge API service (http://{host}:{port})...[/bold cyan]",
+        "serve_daemon_start": "[bold green]✓[/bold green] ContextBridge started in background (PID: {pid})",
+        "serve_daemon_url": "[cyan]Access at: http://{host}:{port}[/cyan]",
+        "serve_daemon_hint": "[dim]Logs are saved to: ~/.cbridge/logs/cbridge-serve.log[/dim]",
         "search_desc": "Perform semantic search in the knowledge base",
         "search_empty": "[yellow]📭 No relevant results found.[/yellow]",
         "search_results_title": "\n[bold cyan]🔍 Search Results: '{query}'[/bold cyan]\n" + "="*40,
@@ -197,10 +203,10 @@ MESSAGES = {
 }
 
 def t(key, **kwargs):
-    lang = CONFIG.get("language", "zh")
+    lang = CONFIG.get("language", "en")
     if lang not in MESSAGES:
-        lang = "zh"
-    text = MESSAGES[lang].get(key, MESSAGES["zh"].get(key, key))
+        lang = "en"
+    text = MESSAGES[lang].get(key, MESSAGES["en"].get(key, key))
     if kwargs:
         try:
             return text.format(**kwargs)

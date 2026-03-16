@@ -21,7 +21,7 @@ def cli():
 def init():
     console.print(t("init_welcome"))
     
-    lang = click.prompt(t("choose_lang"), type=click.Choice(['zh', 'en']), default='zh')
+    lang = click.prompt(t("choose_lang"), type=click.Choice(['zh', 'en']), default='en')
     CONFIG["language"] = lang
     
     mode = click.prompt(t("choose_mode"), type=click.Choice(['embedded', 'external']), default='embedded')
@@ -47,7 +47,7 @@ def init():
             "collection": qmd_collection
         }
     
-    workspace = click.prompt(t("workspace_dir"), default="~/ContextBridge_Workspace")
+    workspace = click.prompt(t("workspace_dir"), default="~/.cbridge/workspace")
     config_data["workspace_dir"] = workspace
     
     save_config(config_data)
@@ -96,9 +96,12 @@ def start():
 @cli.command(help=t("serve_desc"))
 @click.option('--port', default=9790, help='Port to run the API server on')
 @click.option('--host', default='127.0.0.1', help='Host to bind the API server to')
-def serve(port, host):
+@click.option('--daemon', is_flag=True, help='Run as background daemon')
+def serve(port, host, daemon):
     import uvicorn
     import socket
+    import os
+    from core.utils.logger import setup_logger
     
     # Fallback mechanism for port conflicts
     original_port = port
@@ -117,6 +120,42 @@ def serve(port, host):
     if available_port != original_port:
         console.print(f"[yellow]⚠️ Port {original_port} is in use. Falling back to port {available_port}.[/yellow]")
         port = available_port
+
+    if daemon:
+        # Daemonize the process
+        pid = os.fork()
+        if pid > 0:
+            # Parent process exits
+            console.print(t("serve_daemon_start", pid=pid))
+            console.print(t("serve_daemon_url", host=host, port=port))
+            console.print(t("serve_daemon_hint"))
+            sys.exit(0)
+        
+        # Child process continues
+        os.chdir("/")
+        os.setsid()
+        os.umask(0)
+        
+        # Setup logging to file
+        logger = setup_logger("cbridge-serve")
+        
+        # Redirect stdout/stderr to logger
+        class LoggerWriter:
+            def __init__(self, log_func):
+                self.log_func = log_func
+            
+            def write(self, msg):
+                if msg and msg.strip():
+                    self.log_func(msg.strip())
+            
+            def flush(self):
+                pass
+            
+            def isatty(self):
+                return False
+        
+        sys.stdout = LoggerWriter(logger.info)
+        sys.stderr = LoggerWriter(logger.info)  # Use info level instead of error
 
     console.print(t("serve_start", host=host, port=port))
     init_workspace()
