@@ -6,4 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
-cbridge_agent.egg-info
+*.egg-info/
+cbridge_agent.egg-info/

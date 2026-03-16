@@ -1,10 +1,10 @@
 ---
-name: contextbridge
+name: local-context-bridge
 description: Search and retrieve information from the user's local documents, knowledge bases, policies, and historical data.
-metadata: { "openclaw": { "emoji": "📚", "requires": { "bins": ["curl"] } } }
+metadata: { "openclaw": { "emoji": "🌉", "requires": { "bins": ["curl"] } } }
 ---
 
-# ContextBridge Local Knowledge Base
+# Local ContextBridge Knowledge Base
 
 You are equipped with ContextBridge, a powerful local search engine running at `http://127.0.0.1:9790`. It grants you access to the user's private documents (Word, Excel, PDF, Markdown, etc.).
 
