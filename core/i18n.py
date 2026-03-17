@@ -60,6 +60,18 @@ MESSAGES = {
         "search_results_title": "\n[bold cyan]🔍 检索结果: '{query}'[/bold cyan]\n" + "="*40,
         "search_result_item": "\n[bold green]📄 来源:[/bold green] {source} [dim](相似度: {score:.4f})[/dim]\n{line}\n{content}\n",
         "search_result_item_numbered": "\n[bold green]#{idx} 📄 来源:[/bold green] {source} [dim](相似度: {score:.4f})[/dim]\n{line}\n{content}\n",
+        
+        # Explainable search results
+        "explain_result_header": "\n[bold green]#{idx} 📄 来源:[/bold green] {source}",
+        "explain_match_score": "   [bold cyan]✅ 匹配度:[/bold cyan] {score:.1f}%",
+        "explain_keywords": "   [bold yellow]🔑 关键词:[/bold yellow] 命中 {matched}/{total} - {keywords}",
+        "explain_details_header": "   [bold magenta]📊 匹配详情:[/bold magenta]",
+        "explain_semantic_score": "      • 语义相似度: {score:.1f}%",
+        "explain_keyword_score": "      • 关键词匹配: {score:.1f}%",
+        "explain_final_score": "      • 综合得分: {score:.1f}% (语义70% + 关键词30%)",
+        "explain_content_preview": "   [bold blue]📝 内容预览:[/bold blue]",
+        "explain_no_keywords": "无",
+        
         "status_desc": "查看当前配置和运行状态",
         "status_title": "[bold cyan]📊 ContextBridge 运行状态:[/bold cyan]",
         "status_lang": "  [bold]当前语言:[/bold] {lang}",
@@ -181,6 +193,18 @@ MESSAGES = {
         "search_results_title": "\n[bold cyan]� Search Results: '{query}'[/bold cyan]\n" + "="*40,
         "search_result_item": "\n[bold green]📄 Source:[/bold green] {source} [dim](Score: {score:.4f})[/dim]\n{line}\n{content}\n",
         "search_result_item_numbered": "\n[bold green]#{idx} 📄 Source:[/bold green] {source} [dim](Score: {score:.4f})[/dim]\n{line}\n{content}\n",
+        
+        # Explainable search results
+        "explain_result_header": "\n[bold green]#{idx} 📄 Source:[/bold green] {source}",
+        "explain_match_score": "   [bold cyan]✅ Match Score:[/bold cyan] {score:.1f}%",
+        "explain_keywords": "   [bold yellow]🔑 Keywords:[/bold yellow] Matched {matched}/{total} - {keywords}",
+        "explain_details_header": "   [bold magenta]📊 Match Details:[/bold magenta]",
+        "explain_semantic_score": "      • Semantic similarity: {score:.1f}%",
+        "explain_keyword_score": "      • Keyword matching: {score:.1f}%",
+        "explain_final_score": "      • Final score: {score:.1f}% (70% semantic + 30% keyword)",
+        "explain_content_preview": "   [bold blue]📝 Content Preview:[/bold blue]",
+        "explain_no_keywords": "None",
+        
         "status_desc": "View current configuration and running status",
         "status_title": "[bold cyan]📊 ContextBridge Status:[/bold cyan]",
         "status_lang": "  [bold]Language:[/bold] {lang}",

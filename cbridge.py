@@ -434,13 +434,18 @@ def stop():
 @click.option('--top-k', default=5, help='Number of results to return (default: 5)')
 @click.option('--threshold', default=0.5, type=float, help='Minimum similarity score threshold, 0.0-1.0 (default: 0.5)')
 @click.option('--rerank/--no-rerank', default=True, help='Enable/disable keyword-based reranking (default: enabled)')
-def search(query, top_k, threshold, rerank):
+@click.option('--explain/--no-explain', default=True, help='Show/hide detailed explanation for each result (default: enabled)')
+def search(query, top_k, threshold, rerank, explain):
     context_manager = initialize_system()
     results = context_manager.recursive_retrieve(query, top_k=top_k * 2 if rerank else top_k)
     
     if not results:
         console.print(t("search_empty"))
         return
+    
+    # Store original scores before any processing
+    for result in results:
+        result['original_score'] = result.get('score', 0.0)
     
     # Apply threshold filtering
     if threshold > 0.0:
@@ -461,21 +466,18 @@ def search(query, top_k, threshold, rerank):
         return
         
     console.print(t("search_results_title", query=query))
-    for idx, res in enumerate(results, 1):
-        source = res.get('uri', 'Unknown')
-        content = res.get('content', '')
-        score = res.get('score', 0.0)
-        console.print(t("search_result_item_numbered", 
-                       idx=idx, 
-                       source=source, 
-                       score=score, 
-                       line="-"*40, 
-                       content=content.strip()))
+    
+    # Display results with or without explanation
+    if explain:
+        _display_explainable_results(query, results)
+    else:
+        _display_simple_results(results)
 
 def _rerank_by_keywords(query: str, results: list) -> list:
     """
     Rerank search results based on keyword matching.
     Boosts scores for results that contain query keywords.
+    Returns results with enhanced metadata for explainability.
     """
     import re
     
@@ -487,19 +489,95 @@ def _rerank_by_keywords(query: str, results: list) -> list:
         content = result.get('content', '').lower()
         uri = result.get('uri', '').lower()
         
-        # Count keyword matches in content and URI
-        keyword_matches = sum(1 for kw in keywords if kw in content or kw in uri)
-        keyword_ratio = keyword_matches / len(keywords) if keywords else 0
+        # Find which keywords matched and count occurrences
+        matched_keywords = {}
+        for kw in keywords:
+            count_content = content.count(kw)
+            count_uri = uri.count(kw)
+            total_count = count_content + count_uri
+            if total_count > 0:
+                matched_keywords[kw] = total_count
+        
+        # Calculate keyword match ratio
+        keyword_match_count = len(matched_keywords)
+        keyword_ratio = keyword_match_count / len(keywords) if keywords else 0
+        
+        # Store detailed matching information
+        result['matched_keywords'] = matched_keywords
+        result['keyword_match_count'] = keyword_match_count
+        result['total_keywords'] = len(keywords)
+        result['keyword_match_ratio'] = keyword_ratio
         
         # Boost original score based on keyword matches
-        original_score = result.get('score', 0.0)
+        original_score = result.get('original_score', result.get('score', 0.0))
         # Weighted combination: 70% original score + 30% keyword match
         boosted_score = original_score * 0.7 + keyword_ratio * 0.3
+        
+        # Store both scores for explanation
+        result['semantic_score'] = original_score
+        result['keyword_score'] = keyword_ratio
         result['score'] = boosted_score
-        result['keyword_matches'] = keyword_matches
     
     # Sort by boosted score
     return sorted(results, key=lambda x: x.get('score', 0.0), reverse=True)
+
+def _display_simple_results(results: list):
+    """Display search results in simple format (original behavior)"""
+    for idx, res in enumerate(results, 1):
+        source = res.get('uri', 'Unknown')
+        content = res.get('content', '')
+        score = res.get('score', 0.0)
+        console.print(t("search_result_item_numbered", 
+                       idx=idx, 
+                       source=source, 
+                       score=score, 
+                       line="-"*40, 
+                       content=content.strip()))
+
+def _display_explainable_results(query: str, results: list):
+    """Display search results with detailed explanations (explainable RAG)"""
+    import re
+    
+    for idx, res in enumerate(results, 1):
+        source = res.get('uri', 'Unknown')
+        content = res.get('content', '')
+        score = res.get('score', 0.0)
+        
+        # Extract explanation metadata
+        semantic_score = res.get('semantic_score', score)
+        keyword_score = res.get('keyword_score', 0.0)
+        matched_keywords = res.get('matched_keywords', {})
+        keyword_match_count = res.get('keyword_match_count', 0)
+        total_keywords = res.get('total_keywords', 0)
+        
+        # Convert scores to percentages
+        score_pct = score * 100
+        semantic_pct = semantic_score * 100
+        keyword_pct = keyword_score * 100
+        
+        # Format matched keywords with counts
+        if matched_keywords:
+            kw_list = [f"{kw}({count})" for kw, count in matched_keywords.items()]
+            kw_display = ", ".join(kw_list)
+        else:
+            kw_display = t("explain_no_keywords")
+        
+        # Display result header
+        console.print(f"\n{t('explain_result_header', idx=idx, source=source)}")
+        console.print(t("explain_match_score", score=score_pct))
+        console.print(t("explain_keywords", matched=keyword_match_count, total=total_keywords, keywords=kw_display))
+        
+        # Display matching details
+        console.print(t("explain_details_header"))
+        console.print(t("explain_semantic_score", score=semantic_pct))
+        console.print(t("explain_keyword_score", score=keyword_pct))
+        console.print(t("explain_final_score", score=score_pct))
+        
+        # Display content preview
+        console.print(t("explain_content_preview"))
+        console.print("-" * 40)
+        console.print(content.strip())
+        console.print("-" * 40)
 
 @cli.command(help=t("status_desc"))
 def status():
