@@ -70,7 +70,7 @@ export const APP_CONTENT = {
     heroTitle: "让 AI 智能体",
     heroHighlight: "",
     heroSuffix: <>轻松读懂<br />你的本地文档</>,
-    subtitle: "专为 Openclaw、Cursor 等智能体设计的本地知识库插件。让你的 AI 助手轻松读取、理解本地的 Word、Excel 和 PDF 文件，无需上传，隐私安全。",
+    subtitle: "专为 Openclaw、Cursor 等智能体设计的知识库插件。让你的 AI 助手轻松读取、理解本地的 Word、Excel 和 PDF 文件，无需上传，隐私安全。",
     docsSection: "文档中心",
     docCards: [
       {
