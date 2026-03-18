@@ -13,6 +13,40 @@ from core.i18n import t
 
 console = Console(stderr=True)
 
+# ============================================================================
+# 进程检测工具函数
+# ============================================================================
+
+def is_process_running(pid: int) -> bool:
+    """检查指定 PID 的进程是否正在运行"""
+    import os
+    import subprocess
+    
+    if sys.platform == "win32":
+        try:
+            result = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}"],
+                capture_output=True,
+                text=True
+            )
+            return str(pid) in result.stdout
+        except Exception:
+            return False
+    else:
+        try:
+            os.kill(pid, 0)
+            return True
+        except (ProcessLookupError, PermissionError):
+            return False
+
+def cleanup_pid_file(pid_file: Path) -> None:
+    """清理无效或存在的 PID 文件"""
+    if pid_file.exists():
+        try:
+            pid_file.unlink()
+        except Exception:
+            pass
+
 @click.group(help=t("cli_desc"))
 def cli():
     pass
@@ -518,6 +552,27 @@ def start(foreground):
     log_dir = Path.home() / ".cbridge" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     
+    # 检测 API 服务器是否在运行（serve 模式）
+    serve_pid_file = Path.home() / ".cbridge" / "cbridge.pid"
+    if serve_pid_file.exists():
+        try:
+            pid = int(serve_pid_file.read_text().strip())
+            if is_process_running(pid):
+                console.print("[yellow]⚠️  检测到 API 服务器正在运行（PID: {}）[/yellow]".format(pid))
+                console.print("[yellow]API 服务器已包含文件监控功能，无需单独启动 watcher[/yellow]")
+                console.print()
+                console.print("[cyan]建议：[/cyan]")
+                console.print("  - 如需同时运行，请使用：[green]cbridge serve --foreground[/green]")
+                console.print("  - 或先停止 API 服务器：[green]cbridge stop[/green]")
+                console.print()
+                if not click.confirm("是否继续启动 watcher？", default=False):
+                    console.print("[dim]已取消启动 watcher[/dim]")
+                    return
+                console.print("[dim]继续启动 watcher...[/dim]")
+                console.print()
+        except (ValueError, FileNotFoundError):
+            cleanup_pid_file(serve_pid_file)
+    
     if not foreground:
         # 后台运行模式
         if sys.platform == "win32":
@@ -624,7 +679,30 @@ def serve(port, host, foreground):
     import signal
     from core.utils.logger import setup_logger
     
-    # Step 1: Stop any running serve daemon
+    # Step 1: 检测并停止正在运行的 watcher 进程（start 模式）
+    watcher_pid_file = Path.home() / ".cbridge" / "cbridge_watcher.pid"
+    if watcher_pid_file.exists():
+        try:
+            pid = int(watcher_pid_file.read_text().strip())
+            if is_process_running(pid):
+                # 自动停止 watcher 进程
+                if sys.platform == "win32":
+                    import subprocess
+                    subprocess.run(["taskkill", "/PID", str(pid), "/F"], check=True, capture_output=True)
+                else:
+                    os.kill(pid, signal.SIGTERM)
+                watcher_pid_file.unlink()
+                console.print("[cyan]检测到 watcher 进程运行中，已自动停止[/cyan]")
+            else:
+                # 进程不存在，清理 PID 文件
+                cleanup_pid_file(watcher_pid_file)
+        except (ValueError, FileNotFoundError):
+            cleanup_pid_file(watcher_pid_file)
+        except PermissionError:
+            console.print("[red]❌ 无权限停止 watcher 进程（PID: {}）[/red]".format(pid))
+            sys.exit(1)
+    
+    # Step 2: Stop any running serve daemon
     pid_file = Path.home() / ".cbridge" / "cbridge.pid"
     
     if pid_file.exists():
@@ -692,6 +770,10 @@ def serve(port, host, foreground):
             # Unix: traditional double-fork daemonize
             pid = os.fork()
             if pid > 0:
+                # 写入 PID 文件
+                pid_file = Path.home() / ".cbridge" / "cbridge.pid"
+                pid_file.parent.mkdir(parents=True, exist_ok=True)
+                pid_file.write_text(str(pid))
                 console.print(t("serve_daemon_start", pid=pid))
                 console.print(t("serve_daemon_url", host=host, port=port))
                 console.print(f"[dim]📝 Logs: {Path.home() / '.cbridge' / 'logs' / 'cbridge-serve.log'}[/dim]")
