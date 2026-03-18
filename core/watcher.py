@@ -89,26 +89,26 @@ def _worker_loop(context_manager):
                     log_and_print(t("watch_del", name=path.name))
                     context_manager.delete_context(path.name)
                 elif action in ["created", "modified"]:
-                    log_and_print(f"🔄 正在向量化: {path.name}")
+                    log_and_print(t("watch_vectorizing", name=path.name))
                     content, error = parse_document(path)
                     if content:
-                        log_and_print(f"✅ 向量化成功: {path.name}")
+                        log_and_print(t("watch_vectorize_success", name=path.name))
                         if path.suffix.lower() not in ['.md', '.txt']:
                             parsed_path = PARSED_DOCS_DIR / f"{path.stem}.md"
                             with open(parsed_path, "w", encoding="utf-8") as f:
                                 f.write(content)
                         context_manager.write_context(path.name, content, level="L2")
                     else:
-                        log_and_print(f"❌ 向量化失败: {path.name}", level="error")
-                        log_and_print(f"   原因: {error}", level="error")
+                        log_and_print(t("watch_vectorize_failed", name=path.name), level="error")
+                        log_and_print(t("watch_vectorize_reason", error=error), level="error")
             except Exception as e:
-                log_and_print(f"Error processing {file_path}: {e}", level="error")
+                log_and_print(t("watch_error_processing", file_path=file_path, error=e), level="error")
                 import traceback
                 logger.error(traceback.format_exc())
             finally:
                 task_queue.task_done()
     except Exception as e:
-        log_and_print(f"Worker thread fatal error: {e}", level="error")
+        log_and_print(t("watch_worker_fatal", error=e), level="error")
         import traceback
         logger.error(traceback.format_exc())
 
@@ -128,7 +128,7 @@ class DocumentHandler(FileSystemEventHandler):
             file_size_mb = path.stat().st_size / 1024 / 1024
             if file_size_mb > MAX_FILE_SIZE_MB:
                 _resource_monitor["large_file_skips"] += 1
-                log_and_print(f"⚠️  跳过大文件：{path.name} ({file_size_mb:.1f}MB > {MAX_FILE_SIZE_MB}MB)", level="warning")
+                log_and_print(t("watch_skip_large_file", name=path.name, size=file_size_mb, max_size=MAX_FILE_SIZE_MB), level="warning")
                 return
         except (FileNotFoundError, PermissionError):
             return  # 文件不存在或无权限，跳过
@@ -151,7 +151,7 @@ class DocumentHandler(FileSystemEventHandler):
         # 检查队列是否已满
         if task_queue.full():
             _resource_monitor["queue_drops"] += 1
-            log_and_print(f"⚠️  任务队列已满，丢弃事件：{path.name}", level="warning")
+            log_and_print(t("watch_queue_full", name=path.name), level="warning")
             return
         
         # 非阻塞放入队列
@@ -159,7 +159,7 @@ class DocumentHandler(FileSystemEventHandler):
             task_queue.put((event_type, file_path), block=False)
         except queue.Full:
             _resource_monitor["queue_drops"] += 1
-            log_and_print(f"⚠️  任务队列已满，丢弃事件：{path.name}", level="warning")
+            log_and_print(t("watch_queue_full", name=path.name), level="warning")
 
     def on_created(self, event):
         if not event.is_directory:
@@ -180,7 +180,7 @@ def index_dir(directory: Path, show_progress=True):
     
     # 扫描阶段
     if show_progress:
-        log_and_print(f"📂 扫描文件夹: {directory}")
+        log_and_print(t("idx_scanning_dir", directory=directory))
     
     for root, _, files in os.walk(directory):
         for f in files:
@@ -193,8 +193,8 @@ def index_dir(directory: Path, show_progress=True):
         return {"total": 0, "success": 0, "failed": 0, "failed_files": []}
 
     if show_progress:
-        log_and_print(f"✅ 发现 {len(all_files)} 个文件")
-        log_and_print(f"🔄 开始向量化...")
+        log_and_print(t("idx_files_found", count=len(all_files)))
+        log_and_print(t("idx_starting_vectorize"))
     
     success_count = 0
     failed_count = 0
@@ -220,11 +220,11 @@ def index_dir(directory: Path, show_progress=True):
             if show_progress:
                 error_short = error[:100] + "..." if len(error) > 100 else error
                 tqdm.write(f"❌ {path.name} {error_short}")
-                logger.error(f"Failed to index {path.name}: {error}")
+                logger.error(t("idx_failed_log", name=path.name, error=error))
     
     if show_progress:
-        log_and_print(f"✅ 向量化完成!")
-        log_and_print(f"成功: {success_count} | 失败: {failed_count}")
+        log_and_print(t("idx_vectorize_complete"))
+        log_and_print(t("idx_summary", success=success_count, failed=failed_count))
     
     return {
         "total": len(all_files),
@@ -270,28 +270,28 @@ def index_all():
                     f.write(content)
             context_manager.write_context(path.name, content, level="L2")
             tqdm.write(f"✅ {path.name}")
-            logger.info(f"Successfully indexed: {path.name}")
+            logger.info(t("idx_success_log", name=path.name))
         else:
             tqdm.write(f"❌ {path.name}  {error}")
-            logger.error(f"Failed to index {path.name}: {error}")
+            logger.error(t("idx_failed_log", name=path.name, error=error))
     log_and_print(t("idx_complete"))
 
 def start_watching():
     try:
         context_manager = initialize_system()
     except Exception as e:
-        log_and_print(f"Failed to initialize system: {e}", level="error")
+        log_and_print(t("watch_init_failed", error=e), level="error")
         import traceback
         logger.error(traceback.format_exc())
         return
     
     # 输出性能模式信息
-    log_and_print(f"📊 性能模式：{PERFORMANCE_MODE.upper()}")
-    log_and_print(f"   - 轮询间隔：{POLL_INTERVAL}秒")
-    log_and_print(f"   - 防抖时间：{DEBOUNCE_SECONDS}秒")
-    log_and_print(f"   - 最大文件大小：{MAX_FILE_SIZE_MB}MB")
-    log_and_print(f"   - 任务队列大小：{MAX_QUEUE_SIZE}")
-    log_and_print(f"   - Worker 线程数：{WORKER_THREADS}")
+    log_and_print(t("watch_performance_mode", mode=PERFORMANCE_MODE.upper()))
+    log_and_print(t("watch_poll_interval", interval=POLL_INTERVAL))
+    log_and_print(t("watch_debounce_time", seconds=DEBOUNCE_SECONDS))
+    log_and_print(t("watch_max_file_size", size=MAX_FILE_SIZE_MB))
+    log_and_print(t("watch_queue_size", size=MAX_QUEUE_SIZE))
+    log_and_print(t("watch_worker_threads", count=WORKER_THREADS))
     
     # Start worker threads for async parsing
     worker_threads = []
@@ -299,7 +299,7 @@ def start_watching():
         worker_thread = threading.Thread(target=_worker_loop, args=(context_manager, i), daemon=True)
         worker_thread.start()
         worker_threads.append(worker_thread)
-    log_and_print(f"✅ 已启动 {WORKER_THREADS} 个 worker 线程")
+    log_and_print(t("watch_workers_started", count=WORKER_THREADS))
     
     event_handler = DocumentHandler(context_manager)
     observer = PollingObserver(timeout=POLL_INTERVAL)  # 使用配置的轮询间隔
@@ -316,13 +316,13 @@ def start_watching():
                     log_and_print(t("watch_dir", dir=d))
                     watched_dirs.add(str(d))
         except Exception as e:
-            log_and_print(f"Error scheduling watch directories: {e}", level="error")
+            log_and_print(t("watch_schedule_error", error=e), level="error")
             import traceback
             logger.error(traceback.format_exc())
 
     schedule_new_dirs()
     observer.start()
-    log_and_print("ContextBridge watcher started successfully")
+    log_and_print(t("watch_started_success"))
     
     try:
         while True:
@@ -335,7 +335,7 @@ def start_watching():
         for _ in worker_threads:
             task_queue.put(("stop", None))
     except Exception as e:
-        log_and_print(f"Error in watch loop: {e}", level="error")
+        log_and_print(t("watch_loop_error", error=e), level="error")
         import traceback
         logger.error(traceback.format_exc())
         observer.stop()
@@ -349,7 +349,7 @@ def start_watching():
             wt.join()
         # 输出资源监控统计
         if _resource_monitor["queue_drops"] > 0 or _resource_monitor["large_file_skips"] > 0:
-            log_and_print(f"📊 资源监控统计:")
-            log_and_print(f"   - 队列丢弃事件：{_resource_monitor['queue_drops']}")
-            log_and_print(f"   - 跳过大文件：{_resource_monitor['large_file_skips']}")
-        log_and_print("✅ ContextBridge watcher stopped.")
+            log_and_print(t("watch_resource_stats"))
+            log_and_print(t("watch_queue_drops", count=_resource_monitor['queue_drops']))
+            log_and_print(t("watch_large_file_skips", count=_resource_monitor['large_file_skips']))
+        log_and_print(t("watch_stopped"))

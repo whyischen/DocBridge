@@ -66,6 +66,7 @@ context-bridge/
 4. **国际化**：
    - 使用 `core.i18n.t()` 函数进行文本翻译
    - 支持中文（zh）和英文（en）
+   - 中/英文模式隔离，禁止英文模式输出中文日志的情况。
 
 5. **日志记录**：
    - 使用 `core.utils.logger.setup_logger()` 创建日志记录器

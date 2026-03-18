@@ -1,4 +1,4 @@
-markitdown
+markitdown[all]
 watchdog
 chromadb>=0.4.0
 mcp

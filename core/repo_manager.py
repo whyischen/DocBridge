@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 from rich.console import Console
 from core.config import get_repos
+from core.i18n import t
 
 console = Console(stderr=True)
 
@@ -80,4 +81,4 @@ def start_auto_sync():
     # Start background thread
     thread = threading.Thread(target=_auto_sync_loop, daemon=True)
     thread.start()
-    console.print("[dim]⏱️ 自动拉取 GitHub 仓库的后台任务已启动[/dim]")
+    console.print(t("repo_auto_sync_started"))
