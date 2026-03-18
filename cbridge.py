@@ -552,6 +552,19 @@ def start(foreground):
     log_dir = Path.home() / ".cbridge" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     
+    # 同模式检测：检查是否已有 watcher 进程在运行（start 模式）
+    watcher_pid_file = Path.home() / ".cbridge" / "cbridge_watcher.pid"
+    if not foreground and watcher_pid_file.exists():
+        try:
+            pid = int(watcher_pid_file.read_text().strip())
+            if is_process_running(pid):
+                console.print("[red]❌ Watcher already running (PID: {})[/red]".format(pid))
+                console.print("[dim]Use 'cbridge stop' to stop it first[/dim]")
+                sys.exit(1)
+        except (ProcessLookupError, ValueError):
+            # 进程不存在，清理旧 PID 文件
+            watcher_pid_file.unlink()
+    
     # 检测 API 服务器是否在运行（serve 模式）
     serve_pid_file = Path.home() / ".cbridge" / "cbridge.pid"
     if serve_pid_file.exists():
@@ -679,7 +692,20 @@ def serve(port, host, foreground):
     import signal
     from core.utils.logger import setup_logger
     
-    # Step 1: 检测并停止正在运行的 watcher 进程（start 模式）
+    # Step 1: 同模式检测 - 检查是否已有 serve 进程在运行
+    pid_file = Path.home() / ".cbridge" / "cbridge.pid"
+    if pid_file.exists():
+        try:
+            pid = int(pid_file.read_text().strip())
+            if is_process_running(pid):
+                console.print("[red]❌ API server already running (PID: {})[/red]".format(pid))
+                console.print("[dim]Use 'cbridge stop' to stop it first[/dim]")
+                sys.exit(1)
+        except (ProcessLookupError, ValueError):
+            # 进程不存在，清理旧 PID 文件
+            pid_file.unlink()
+    
+    # Step 2: 检测并停止正在运行的 watcher 进程（start 模式）- 保留现有逻辑
     watcher_pid_file = Path.home() / ".cbridge" / "cbridge_watcher.pid"
     if watcher_pid_file.exists():
         try:
@@ -702,9 +728,7 @@ def serve(port, host, foreground):
             console.print("[red]❌ 无权限停止 watcher 进程（PID: {}）[/red]".format(pid))
             sys.exit(1)
     
-    # Step 2: Stop any running serve daemon
-    pid_file = Path.home() / ".cbridge" / "cbridge.pid"
-    
+    # Step 3: Stop any running serve daemon (cleanup stale PID files)
     if pid_file.exists():
         try:
             pid = int(pid_file.read_text().strip())
