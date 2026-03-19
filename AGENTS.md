@@ -44,6 +44,10 @@ context-bridge/
 ├── main.py                       # 主程序入口
 ├── setup.py                      # 包配置
 └── requirements.txt              # 依赖列表
+└── openclaw_skills               # 项目 Openclaw skills 文件夹
+└── docs                          # 官网文档中心
+│   ├── agent-generate            # ai 生成文档目录 
+
 ```
 
 ## 编码规范
