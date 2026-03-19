@@ -18,8 +18,7 @@ cbridge init
 
 During initialization, you will be prompted to:
 1. Choose the interface language (`en` or `zh`).
-2. Choose the running mode (`embedded` or `external`). The default `embedded` mode is highly recommended for individual users as it does not require external database setups.
-3. Configure your workspace directory. The default is `~/ContextBridge_Workspace`.
+2. Configure your workspace directory. The default is `~/ContextBridge_Workspace`.
 
 ## Commands Guide
 

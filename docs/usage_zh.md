@@ -18,8 +18,7 @@ cbridge init
 
 初始化过程中，你需要指定：
 1. 终端显示语言（`en` 或 `zh`）。
-2. 运行模式（`embedded` 内置或 `external` 外置）。对于个人用户，强烈推荐默认的 `embedded` 模式，因为它可以让你在本地零配置运行向量搜索。
-3. 工作区目录（默认为 `~/ContextBridge_Workspace`）。
+2. 工作区目录（默认为 `~/ContextBridge_Workspace`）。
 
 ## 核心使用指南
 

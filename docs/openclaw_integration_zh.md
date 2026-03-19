@@ -9,7 +9,16 @@
 
 ContextBridge 的原生技能已发布至[ClawHub.ai](https://clawhub.ai/)。我们提供两种安装方式：
 
-### 方式一：通过命令行安装（推荐开发者）
+### ✨ 方式一：通过对话安装（最简单）
+
+如果你已经在运行 OpenClaw，你可以直接通过自然语言让 AI 替你完成安装：
+
+> **💬 对话示例：**
+> _"为我安装 local-context-bridge  skill"_
+
+OpenClaw 会自动解析意图并引导你完成后续的安装流程。
+
+### 💻 方式二：通过命令行安装（推荐开发者）
 
 🛠 前置准备
 
@@ -27,15 +36,6 @@ npm install -g clawhub@latest
 # 2. 安装 local-context-bridge 技能
 clawhub install local-context-bridge
 ```
-
-### 方式二：通过对话安装（新手友好）
-
-如果你已经在运行 OpenClaw，你可以直接通过自然语言让 AI 替你完成安装：
-
-> **💬 对话示例：**
-> _"为我安装 local-context-bridge  skill"_
-
-OpenClaw 会自动解析意图并引导你完成后续的安装流程。
 
 ---
 

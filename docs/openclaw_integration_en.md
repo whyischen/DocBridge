@@ -9,7 +9,16 @@ With just a simple `SKILL.md` file, you can empower OpenClaw agents to instantly
 
 ContextBridge's native skill is published on [ClawHub.ai](https://clawhub.ai/). We provide two installation methods:
 
-### Method 1: Command Line Installation (Recommended for Developers)
+### ✨ Method 1: Conversational Installation (Easiest)
+
+If you already have OpenClaw running, you can simply ask the AI to complete the installation using natural language:
+
+> **💬 Example Conversation:**
+> _"Install the local-context-bridge skill for me"_
+
+OpenClaw will automatically parse your intent and guide you through the installation process.
+
+### 💻 Method 2: Command Line Installation (Recommended for Developers)
 
 🛠 Prerequisites
 
@@ -27,15 +36,6 @@ npm install -g clawhub@latest
 # 2. Install the local-context-bridge skill
 clawhub install local-context-bridge
 ```
-
-### Method 2: Conversational Installation (Beginner-Friendly)
-
-If you already have OpenClaw running, you can simply ask the AI to complete the installation using natural language:
-
-> **💬 Example Conversation:**
-> _"Install the local-context-bridge skill for me"_
-
-OpenClaw will automatically parse your intent and guide you through the installation process.
 
 ---
 

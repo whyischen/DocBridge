@@ -145,24 +145,7 @@ def init():
     
     lang = click.prompt(t("choose_lang"), type=click.Choice(['zh', 'en']), default='en')
     
-    mode = click.prompt(t("choose_mode"), type=click.Choice(['embedded', 'external']), default='embedded')
-    
-    config_data = {"mode": mode, "language": lang, "watch_dirs": []}
-    
-    if mode == 'external':
-        ov_endpoint = click.prompt(t("ov_endpoint"), default="http://localhost:9780")
-        ov_mount = click.prompt(t("ov_mount"), default="viking://contextbridge/")
-        qmd_endpoint = click.prompt(t("qmd_endpoint"), default="http://localhost:9791")
-        qmd_collection = click.prompt(t("qmd_collection"), default="cb_documents")
-        
-        config_data["openviking"] = {
-            "endpoint": ov_endpoint,
-            "mount_path": ov_mount
-        }
-        config_data["qmd"] = {
-            "endpoint": qmd_endpoint,
-            "collection": qmd_collection
-        }
+    config_data = {"mode": "embedded", "language": lang, "watch_dirs": []}
     
     workspace = click.prompt(t("workspace_dir"), default="~/.cbridge/workspace")
     config_data["workspace_dir"] = workspace
@@ -1064,7 +1047,6 @@ def status():
     
     console.print(t("status_title"))
     console.print(t("status_lang", lang=CONFIG.get('language', 'zh')))
-    console.print(t("status_mode", mode=CONFIG.get('mode', 'embedded')))
     console.print(t("status_workspace", workspace=WORKSPACE_DIR))
     console.print(t("status_ov_mount", mount=CONFIG.get('openviking', {}).get('mount_path')))
     console.print(t("status_qmd_coll", coll=CONFIG.get('qmd', {}).get('collection')))

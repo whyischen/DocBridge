@@ -22,11 +22,6 @@ MESSAGES = {
         "init_complete": "[bold green]✅ 初始化完成！ContextBridge 已在后台运行。[/bold green]",
         "init_daemon_failed": "[red]❌ 启动后台服务失败: {error}[/red]",
         "choose_lang": "请选择语言 / Choose language (zh/en)",
-        "choose_mode": "请选择运行模式 (embedded/external)",
-        "ov_endpoint": "OpenViking 服务地址",
-        "ov_mount": "OpenViking 挂载路径",
-        "qmd_endpoint": "QMD 服务地址",
-        "qmd_collection": "QMD 集合名称",
         "workspace_dir": "工作区目录",
         "config_saved": "[bold green]✅ 配置已保存至 {path}[/bold green]",
         "watch_desc": "管理监控目录",
@@ -94,7 +89,6 @@ MESSAGES = {
         "status_desc": "查看当前配置和运行状态",
         "status_title": "[bold cyan]📊 ContextBridge 运行状态:[/bold cyan]",
         "status_lang": "  [bold]当前语言:[/bold] {lang}",
-        "status_mode": "  [bold]运行模式:[/bold] {mode}",
         "status_workspace": "  [bold]工作区:[/bold] {workspace}",
         "status_ov_mount": "  [bold]OpenViking 挂载点:[/bold] {mount}",
         "status_qmd_coll": "  [bold]QMD 集合:[/bold] {coll}",
@@ -107,7 +101,7 @@ MESSAGES = {
         "mcp_start": "[bold cyan]🔌 正在启动 ContextBridge MCP 服务...[/bold cyan]",
         "lang_desc": "切换显示语言 / Switch display language",
         "lang_success": "[bold green]✅ 语言已切换为: {lang}[/bold green]",
-        "workspace_init": "[dim]工作区已初始化于 {dir} (模式: {mode})[/dim]",
+        "workspace_init": "[dim]工作区已初始化于 {dir}[/dim]",
         "logs_desc": "查看实时日志",
         "logs_lines_help": "显示最后 N 行日志",
         "logs_follow_help": "实时跟踪日志（类似 tail -f）",
@@ -133,20 +127,13 @@ MESSAGES = {
         
         # openviking_manager.py
         "ov_init_embed": "[dim]⚙️ 初始化内嵌 OpenViking 管理器, 挂载路径: {mount_path}[/dim]",
-        "ov_init_ext": "[dim]🔗 接入外部 OpenViking 服务: {endpoint}, 挂载路径: {mount_path}[/dim]",
         "ov_write_embed": "[cyan]📝 [OpenViking] 正在处理上下文:[/cyan] {uri}",
-        "ov_write_ext": "[cyan]📝 [外部 OpenViking] 模拟通过 API 将上下文写入[/cyan] {uri}",
         "ov_del_embed": "[yellow]🗑️ [OpenViking] 正在删除上下文:[/yellow] {uri}",
-        "ov_del_ext": "[yellow]🗑️ [外部 OpenViking] 模拟通过 API 删除上下文[/yellow] {uri}",
         "ov_ret_embed": "[magenta]🧠 [OpenViking] 执行目录递归检索策略:[/magenta] '{query}'",
-        "ov_ret_ext": "[magenta]🧠 [外部 OpenViking] 模拟向 {endpoint} 发起递归检索:[/magenta] '{query}'",
         
         # qmd_runtime.py
         "qmd_init_embed": "[dim]⚙️ 初始化内嵌 QMD 引擎 (基于 ChromaDB)...[/dim]",
-        "qmd_init_ext": "[dim]🔗 接入外部 QMD 服务: {endpoint}, 集合: {collection}[/dim]",
-        "qmd_write_ext": "[cyan]📝 [外部 QMD] 模拟向 {endpoint}/{collection} 写入文档[/cyan] {doc_id}",
-        "qmd_del_ext": "[yellow]🗑️ [外部 QMD] 模拟向 {endpoint}/{collection} 发起删除 URI:[/yellow] {uri}",
-        "qmd_search_ext": "[magenta]🔍 [外部 QMD] 模拟向 {endpoint}/{collection} 发起混合检索:[/magenta] '{query}'",
+
         
         # parser.py
         "parse_start": "[dim]📄 正在解析文档:[/dim] {file_path}",
@@ -276,11 +263,6 @@ MESSAGES = {
         "init_complete": "[bold green]✅ Initialization complete! ContextBridge is now running in the background.[/bold green]",
         "init_daemon_failed": "[red]❌ Failed to start background service: {error}[/red]",
         "choose_lang": "Choose language / 请选择语言",
-        "choose_mode": "Choose mode",
-        "ov_endpoint": "OpenViking Endpoint",
-        "ov_mount": "OpenViking Mount Path",
-        "qmd_endpoint": "QMD Endpoint",
-        "qmd_collection": "QMD Collection Name",
         "workspace_dir": "Workspace Directory",
         "config_saved": "[bold green]✅ Configuration saved to {path}[/bold green]",
         "watch_desc": "Manage monitored directories",
@@ -348,7 +330,6 @@ MESSAGES = {
         "status_desc": "View current configuration and running status",
         "status_title": "[bold cyan]📊 ContextBridge Status:[/bold cyan]",
         "status_lang": "  [bold]Language:[/bold] {lang}",
-        "status_mode": "  [bold]Mode:[/bold] {mode}",
         "status_workspace": "  [bold]Workspace:[/bold] {workspace}",
         "status_ov_mount": "  [bold]OpenViking Mount:[/bold] {mount}",
         "status_qmd_coll": "  [bold]QMD Collection:[/bold] {coll}",
@@ -361,7 +342,7 @@ MESSAGES = {
         "mcp_start": "[bold cyan]🔌 Starting ContextBridge MCP Service...[/bold cyan]",
         "lang_desc": "切换显示语言 / Switch display language",
         "lang_success": "[bold green]✅ Language switched to: {lang}[/bold green]",
-        "workspace_init": "[dim]Workspace initialized at {dir} (mode: {mode})[/dim]",
+        "workspace_init": "[dim]Workspace initialized at {dir}[/dim]",
         "logs_desc": "View real-time logs",
         "logs_lines_help": "Display last N lines of logs",
         "logs_follow_help": "Follow logs in real-time (like tail -f)",
@@ -387,20 +368,13 @@ MESSAGES = {
         
         # openviking_manager.py
         "ov_init_embed": "[dim]⚙️ Initializing embedded OpenViking manager, mount path: {mount_path}[/dim]",
-        "ov_init_ext": "[dim]🔗 Connecting to external OpenViking service: {endpoint}, mount path: {mount_path}[/dim]",
         "ov_write_embed": "[cyan]📝 [OpenViking] Processing context:[/cyan] {uri}",
-        "ov_write_ext": "[cyan]📝 [External OpenViking] Simulating context write via API[/cyan] {uri}",
         "ov_del_embed": "[yellow]🗑️ [OpenViking] Deleting context:[/yellow] {uri}",
-        "ov_del_ext": "[yellow]🗑️ [External OpenViking] Simulating context deletion via API[/yellow] {uri}",
         "ov_ret_embed": "[magenta]🧠 [OpenViking] Executing directory recursive retrieval strategy:[/magenta] '{query}'",
-        "ov_ret_ext": "[magenta]🧠 [External OpenViking] Simulating recursive retrieval to {endpoint}:[/magenta] '{query}'",
         
         # qmd_runtime.py
         "qmd_init_embed": "[dim]⚙️ Initializing embedded QMD engine (based on ChromaDB)...[/dim]",
-        "qmd_init_ext": "[dim]🔗 Connecting to external QMD service: {endpoint}, collection: {collection}[/dim]",
-        "qmd_write_ext": "[cyan]📝 [External QMD] Simulating document write to {endpoint}/{collection}[/cyan] {doc_id}",
-        "qmd_del_ext": "[yellow]🗑️ [External QMD] Simulating URI deletion to {endpoint}/{collection}:[/yellow] {uri}",
-        "qmd_search_ext": "[magenta]🔍 [External QMD] Simulating hybrid search to {endpoint}/{collection}:[/magenta] '{query}'",
+
         
         # parser.py
         "parse_start": "[dim]📄 Parsing document:[/dim] {file_path}",

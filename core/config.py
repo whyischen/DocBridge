@@ -65,13 +65,9 @@ def is_configured() -> bool:
     检查 ContextBridge 是否已配置。
     
     Returns:
-        True 如果配置文件存在且包含有效的 mode，否则 False
+        True 如果配置文件存在，否则 False
     """
-    if not CONFIG_PATH.exists():
-        return False
-    
-    config = load_config()
-    return config.get("mode") is not None
+    return CONFIG_PATH.exists()
 
 def auto_configure(workspace_dir=None):
     """
@@ -93,38 +89,21 @@ def auto_configure(workspace_dir=None):
             "config": CONFIG
         }
 
-    # 检测外部服务
-    from core.factories import detect_services
-    services = detect_services()
-
-    # 生成配置
+    # 生成配置（始终使用 embedded 模式）
     config_data = {
-        "mode": "external" if (services.get("qmd_available") and services.get("openviking_available")) else "embedded",
+        "mode": "embedded",
         "workspace_dir": workspace_dir or str(Path.home() / ".cbridge" / "workspace"),
         "watch_dirs": [],
         "pdf_parser_strategy": "markitdown"  # "markitdown" or "docling"
     }
-
-    if services.get("qmd_available"):
-        config_data["qmd"] = {
-            "endpoint": services.get("qmd_endpoint", "http://localhost:9791"),
-            "collection": "contextbridge_docs"
-        }
-
-    if services.get("openviking_available"):
-        config_data["openviking"] = {
-            "endpoint": services.get("openviking_endpoint", "http://localhost:9780"),
-            "mount_path": "viking://contextbridge/"
-        }
 
     # 保存配置
     save_config(config_data)
 
     return {
         "status": "success",
-        "mode": config_data["mode"],
         "workspace": config_data["workspace_dir"],
-        "message": f"ContextBridge configured in {config_data['mode']} mode"
+        "message": "ContextBridge configured in embedded mode"
     }
 
 def init_workspace():
@@ -164,4 +143,4 @@ def init_workspace():
     from core.i18n import t
     from rich.console import Console
     console = Console(stderr=True)
-    console.print(t("workspace_init", dir=WORKSPACE_DIR, mode=CONFIG.get('mode', 'embedded')))
+    console.print(t("workspace_init", dir=WORKSPACE_DIR))

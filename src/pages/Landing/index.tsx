@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Terminal, ArrowRight, Copy, Check, BookOpen, Zap } from 'lucide-react';
+import { Terminal, ArrowRight, Copy, Check, BookOpen, Zap, Blocks } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -47,6 +47,13 @@ export default function LandingPage({ lang, t, copied, copyInstallCmd }: Landing
       }, 100);
     }
   }, [location.hash]);
+
+  const handleOpenDoc = (id: DocType) => {
+    setActiveDoc(id);
+    setTimeout(() => {
+      document.getElementById('docs-center')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
 
 
   const docCards = [
@@ -99,26 +106,45 @@ export default function LandingPage({ lang, t, copied, copyInstallCmd }: Landing
           {t.subtitle}
         </motion.p>
 
-        <motion.div {...fadeUp(0.24)} className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-md mt-12">
-          <div className="flex items-center justify-between w-full sm:flex-1 bg-white dark:bg-[#25282c] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 font-mono text-sm shadow-sm">
-            <span className="text-slate-500 dark:text-slate-400 select-all truncate font-medium">pip install cbridge-agent</span>
+        <motion.div {...fadeUp(0.24)} className="flex flex-col sm:flex-row items-center gap-2.5 w-full max-w-3xl mt-14 px-4">
+          {/* Minimalist Command Box */}
+          <div className="flex-1 w-full flex items-center justify-between bg-white dark:bg-[#25282c] border border-slate-200 dark:border-white/[0.08] rounded-2xl pl-4 pr-1 py-1 shadow-sm ring-1 ring-black/[0.02] dark:ring-white/[0.02]">
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <Terminal size={14} className="text-slate-400 dark:text-slate-500" />
+              <span className="text-slate-600 dark:text-slate-300 font-mono text-[13px] truncate">pip install cbridge-agent</span>
+            </div>
             <button
               onClick={copyInstallCmd}
-              className="ml-3 flex-shrink-0 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               title="Copy"
             >
-              {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
+              {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
             </button>
           </div>
-          <a
-            href="#quickstart"
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white text-sm font-semibold transition-colors shadow-lg shadow-indigo-500/25 whitespace-nowrap w-full sm:w-auto"
-          >
-            {t.quickStart}
-            <ArrowRight size={15} />
-          </a>
+          
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Primary Action */}
+            <a
+              href="#quickstart"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-slate-900 dark:hover:bg-white dark:hover:text-slate-900 text-white font-bold text-sm transition-all shadow-md shadow-indigo-500/10"
+            >
+              {t.quickStart}
+              <ArrowRight size={15} />
+            </a>
+            
+            {/* Integration Entry */}
+            <button
+              onClick={() => handleOpenDoc('openclaw')}
+              className="flex-none flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 hover:border-indigo-400/50 text-slate-600 dark:text-slate-300 font-bold text-sm transition-all shadow-sm group"
+              title={t.openclawCta.badge}
+            >
+              <Blocks size={16} className="text-indigo-500 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span>OpenClaw</span>
+            </button>
+          </div>
         </motion.div>
       </section>
+
 
       {/* Features */}
       <section className="px-4 sm:px-6 pb-20 sm:pb-28">

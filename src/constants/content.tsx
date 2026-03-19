@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Terminal, FolderSync, Settings, Activity, Zap, BookOpen, FileText } from 'lucide-react';
+import { Database, Terminal, FolderSync, Settings, Shield, Zap, BookOpen, FileText, Cog } from 'lucide-react';
 
 export const APP_CONTENT = {
   en: {
@@ -22,6 +22,16 @@ export const APP_CONTENT = {
         desc: "Install and use ContextBridge as an OpenClaw Skill"
       }
     ],
+    openclawCta: {
+      badge: "OpenClaw Integration",
+      title: "Use with OpenClaw in Seconds",
+      desc: "ContextBridge is available as an OpenClaw Skill. Install it once and let your AI agent search your local documents instantly.",
+      steps: [
+        { label: "Install", cmd: "pip install cbridge-agent" },
+        { label: "Init", cmd: "cbridge init && cbridge start" },
+      ],
+      cta: "View Integration Guide",
+    },
     features: [
       {
         icon: Settings,
@@ -34,9 +44,9 @@ export const APP_CONTENT = {
         desc: <>Effortlessly track project directories with <code className="text-indigo-300">cbridge watch</code>. Add or remove context sources instantly without restarts.</>
       },
       {
-        icon: Activity,
-        title: "Real-time CRUD Sync",
-        desc: "Instantly detects file creations, modifications, and deletions. ContextBridge automatically parses and updates your vector index in real-time."
+        icon: Shield,
+        title: "100% Local Privacy",
+        desc: "All data stays on your machine. No cloud APIs, no uploads, no tracking. Your documents never leave your hard drive—complete data sovereignty."
       },
       {
         icon: Terminal,
@@ -84,6 +94,16 @@ export const APP_CONTENT = {
         desc: "将 ContextBridge 作为 OpenClaw Skill 安装和使用"
       }
     ],
+    openclawCta: {
+      badge: "OpenClaw 集成",
+      title: "秒级接入 OpenClaw",
+      desc: "ContextBridge 已作为 OpenClaw Skill 发布。一次安装，即可让你的 AI 智能体即时检索本地文档。",
+      steps: [
+        { label: "安装", cmd: "pip install cbridge-agent" },
+        { label: "启动", cmd: "cbridge init && cbridge start" },
+      ],
+      cta: "查看集成指南",
+    },
     features: [
       {
         icon: Settings,
@@ -96,9 +116,9 @@ export const APP_CONTENT = {
         desc: <>使用 <code className="text-indigo-300">cbridge watch</code> 命令轻松追踪项目目录。无需重启，即可实时动态增减上下文来源。</>
       },
       {
-        icon: Activity,
-        title: "毫秒级增量同步",
-        desc: "精准捕捉文件创建、修改及删除。ContextBridge 会在后台自动完成毫秒级解析并同步更新向量索引。"
+        icon: Shield,
+        title: "隐私保护",
+        desc: "所有数据完全保留在本地。无需云端 API，无需上传，无任何追踪。你的文档永远不会离开你的硬盘——数据主权完全掌握在你手中。"
       },
       {
         icon: Terminal,
