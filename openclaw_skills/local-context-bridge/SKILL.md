@@ -1,99 +1,276 @@
 ---
 name: local-context-bridge
-description: Search and retrieve information from the user's local documents, knowledge bases, policies, and historical data.
+description: Search local documents (PDF, Word, Excel, Markdown) using semantic search.
 metadata: { "openclaw": { "emoji": "🌉", "requires": { "bins": ["curl"] } } }
 ---
 
-# Local ContextBridge Knowledge Base
+# ContextBridge Knowledge Base
 
-This skill allows OpenClaw to search and retrieve information from your local documents (PDF, Word, Excel, Markdown, etc.) using the ContextBridge API.
+ContextBridge is a local AI agent's memory bridge. It provides instant access to your documents (PDF, Office, Markdown) for AI agents like OpenClaw, Claude Desktop, and Cursor.
 
-## 🛠️ PREREQUISITES & INSTALLATION
+## 📚 HOW IT WORKS
 
-If you haven't installed the ContextBridge software on your machine yet, follow these steps first:
+ContextBridge acts as a "Semantic Bridge" between your files and OpenClaw:
+
+1. **Local Indexing**: Scans documents and splits them into text chunks.
+2. **Vectorization**: Converts text into semantic vectors using a local AI embedding model.
+3. **Semantic Search**: Finds the most relevant chunks from your knowledge base.
+4. **100% Private**: All data stays on your local machine.
+
+**Key Features:**
+- 🔌 **MCP and API Ready**: Native support for Model Context Protocol
+- 📄 **Multi-format Parsing**: PDF, Word, Excel, PPTX, Markdown
+- 🔋 **Batteries Included**: Embedded vector database
+- 👁️ **Auto Sync**: Automatic file monitoring and index rebuilding
+
+---
+
+## 🚀 INSTALLATION
 
 ### 1. Install ContextBridge
-Open your terminal and run:
 ```bash
 pip install cbridge-agent
 ```
 
-### 2. Initialize & Add Documents
-Initialize your workspace and tell ContextBridge which folders to index:
+### 2. Initialize Workspace
 ```bash
 cbridge init
-cbridge watch add /path/to/your/documents
 ```
+Creates workspace directories and generates config file (`~/.cbridge/config.yaml`).
 
-### 3. Start the API Service
-ContextBridge must be running in the background to serve requests:
+### 3. Add Documents
 ```bash
-# Start both the file watcher and the API server
-cbridge serve --damon
+cbridge watch add /path/to/your/documents
+cbridge watch list    # View watched folders
 ```
-*The API server runs at `http://127.0.0.1:9790` by default.*
+
+### 4. Start Service
+```bash
+cbridge start         # Start watcher + API server
+# or
+cbridge serve         # API only (http://127.0.0.1:9790)
+```
+
+### Configuration
+Edit `~/.cbridge/config.yaml`:
+```yaml
+workspace_dir: ~/.cbridge/workspace
+watch_dirs:
+  - /path/to/documents
+exclude_patterns:
+  - "**/node_modules/**"
+  - "**/.git/**"
+language: en
+mode: embedded
+```
+
+**Performance Optimization** (for low-end devices):
+```bash
+export CB_MAX_CONCURRENT_FILES=2
+export CB_EMBEDDING_BATCH_SIZE=4
+export CB_DISABLE_WATCHER=true
+```
 
 ---
 
-## 🧠 HOW IT WORKS (For New Users)
+## 🔧 API USAGE
 
-ContextBridge acts as a "Semantic Bridge" between your files and OpenClaw:
+ContextBridge provides a REST API at `http://127.0.0.1:9790`.
 
-1.  **Local Indexing**: When you add a folder, ContextBridge scans your documents (PDF, Docx, etc.) and breaks them into small, manageable text chunks.
-2.  **Vectorization**: Using a **local** AI embedding model, it converts these chunks into mathematical vectors that represent their *meaning*.
-3.  **Semantic Search**: When OpenClaw asks a question, it doesn't just look for exact words. It uses the API to find the most *semantically relevant* chunks from your library.
-4.  **100% Private**: All parsing, embedding, and searching happen **entirely on your local machine**. Your private data is never uploaded to any cloud service.
-
----
-
-## WHEN TO USE THIS SKILL (Trigger Scenarios)
-
-**DIRECTIVE**: If the user's request involves any information that is NOT general public knowledge, you MUST query ContextBridge before answering. Do NOT hallucinate or say "I don't have access" without trying a search first.
-
-### 1. Deep Fact Retrieval (Private Knowledge)
-Trigger this when the user asks for specific numbers, names, or facts buried in their local files.
-- *Examples*: "What was the total budget for the 2024 marketing campaign?", "Who was the lead engineer for Project X?", "Find the summary of the meeting from last Friday."
-
-### 2. Policy-Based Auditing & Compliance
-Trigger this when you are asked to review, verify, or check a document. 
-- **CRITICAL**: You must first search for local "policies", "guidelines", "SOPs", or "standards" to establish the ground truth before performing the audit.
-- *Examples*: "Does this contract follow our standard procurement policy?", "Review this PR based on our internal coding standards."
-
-### 3. Contextual Drafting (Style & Templates)
-Trigger this when the user wants to write something that should match a previous style or use a specific local template.
-- *Examples*: "Draft a project proposal using our standard company template", "Write a follow-up email in the same tone as my previous client communications."
-
-### 4. Technical Support & Internal Processes
-Trigger this for "How-to" questions regarding internal tools, deployment, or onboarding.
-- *Examples*: "How do I set up the local development environment?", "What are the steps for the employee onboarding process?", "How do we handle database migrations?"
-
-## SEARCH STRATEGY (Best Practices)
-
-- **Extract Keywords**: Do NOT search using full conversational sentences. Extract core entities and keywords (e.g., search `"2024 marketing budget"` instead of `"What is the 2024 marketing budget?"`).
-- **Iterative Searching**: If your first search returns empty or irrelevant results, try again using synonyms, broader terms, or different keywords.
-- **Multiple Queries**: For complex tasks (like auditing), you may need to execute multiple `curl` commands to gather all necessary rules and context.
-
-## HOW TO USE THE API
-
-### 1. Search Documents
-Send a POST request to `/api/v1/search` using `curl`.
+### 1. Semantic Search
 ```json
 {
-  "command": "curl -s -X POST http://127.0.0.1:9790/api/v1/search -H 'Content-Type: application/json' -d '{\"query\": \"2024 marketing budget\", \"top_k\": 3}'"
+  "command": "curl -s -X POST http://127.0.0.1:9790/api/v1/search -d '{\"query\": \"project budget 2024\", \"top_k\": 5}'"
 }
 ```
-*The API returns a JSON array of text chunks. You MUST cite the `metadata.source` in your final answer (e.g., "According to `budget.xlsx`...").*
 
-### 2. Manage Watched Folders
-If the user asks to add or remove a folder to their knowledge base:
+**Response:**
 ```json
 {
-  "command": "curl -s -X POST http://127.0.0.1:9790/api/v1/watch/directories -H 'Content-Type: application/json' -d '{\"path\": \"/absolute/path/to/folder\"}'"
+  "results": [
+    {
+      "content": "The 2024 Q1 budget is $500,000...",
+      "metadata": {"source": "budget.xlsx"},
+      "score": 0.89
+    }
+  ]
 }
 ```
-To check currently watched folders:
+
+### 2. Check Status
 ```json
 {
   "command": "curl -s http://127.0.0.1:9790/api/v1/watch/status"
 }
 ```
+
+### 3. Add/Remove Watch Directory
+```json
+// Add
+{
+  "command": "curl -s -X POST http://127.0.0.1:9790/api/v1/watch/directories -d '{\"path\": \"/path/to/folder\"}'"
+}
+
+// Remove
+{
+  "command": "curl -s -X DELETE http://127.0.0.1:9790/api/v1/watch/directories -d '{\"path\": \"/path/to/folder\"}'"
+}
+```
+
+### 4. Manual Re-index
+```json
+{
+  "command": "curl -s -X POST http://127.0.0.1:9790/api/v1/index/sync"
+}
+```
+
+### 5. Health Check
+```json
+{
+  "command": "curl -s http://127.0.0.1:9790/api/v1/health"
+}
+```
+
+---
+
+## 🎯 WHEN TO USE THIS SKILL
+
+**DIRECTIVE**: If the user's request involves information NOT in general public knowledge, MUST query ContextBridge before answering.
+
+### 1. Deep Fact Retrieval (Private Knowledge)
+Find specific numbers, names, or facts from local files.
+- **Examples**: "What was the 2024 marketing budget?", "Who was the lead engineer for Project X?"
+- **Query**: `"2024 marketing budget"` ✅
+
+### 2. Policy-Based Auditing & Compliance
+Review documents against standards.
+- **Examples**: "Does this contract follow our procurement policy?", "Review this PR based on coding standards."
+- **Strategy**: First search `"coding standards"`, then search document content.
+
+### 3. Contextual Drafting (Style & Templates)
+Write content matching previous style or templates.
+- **Examples**: "Draft a project proposal using our template.", "Write a follow-up email in the same tone."
+- **Query**: `"project proposal template"` or `"client communication style"`
+
+### 4. Technical Support & Internal Processes
+Answer "How-to" questions about internal tools or processes.
+- **Examples**: "How do I set up the dev environment?", "What's the onboarding process?"
+- **Query**: `"development environment setup"` or `"onboarding process steps"`
+
+### 5. Codebase Understanding
+Navigate and understand your own codebase.
+- **Examples**: "Where is authentication implemented?", "How does payment processing work?"
+- **Query**: `"authentication implementation"` or `"payment processing flow"`
+
+---
+
+## 💡 SEARCH BEST PRACTICES
+
+### Keyword Extraction
+- **DO**: Extract core entities
+  - `"2024 marketing budget"` ✅
+- **DON'T**: Use full sentences
+  - `"What was the budget for 2024 marketing?"` ❌
+
+### Iterative Searching
+1. Start with specific keywords
+2. If no results, broaden query
+3. Try synonyms or related terms
+
+### Multiple Queries
+For complex tasks, execute multiple searches:
+```json
+{
+  "command": "curl -s -X POST http://127.0.0.1:9790/api/v1/search -d '{\"query\": \"coding standards python\", \"top_k\": 3}'"
+}
+```
+
+### Citation Requirement
+**Always cite sources**:
+- "According to `budget.xlsx`..."
+- "As documented in `employee_handbook.pdf`..."
+
+---
+
+## 📖 CLI COMMANDS
+
+```bash
+# Initialization
+cbridge init                 # Setup workspace
+cbridge lang en              # Switch language
+
+# Document Management
+cbridge watch add <path>     # Add folder
+cbridge watch remove <path>  # Remove folder
+cbridge watch list           # List folders
+cbridge index                # Manual re-index
+
+# Service Control
+cbridge start                # Start service
+cbridge serve                # API only
+cbridge stop                 # Stop
+cbridge status               # Check status
+cbridge logs                 # View logs
+
+# Search
+cbridge search <query>       # Search documents
+```
+
+---
+
+## 🔍 TROUBLESHOOTING
+
+### API Connection Failed
+```bash
+cbridge status               # Check status
+cbridge restart              # Restart service
+curl -s http://127.0.0.1:9790/api/v1/health  # Health check
+```
+
+### Cannot Find Latest Content
+```bash
+cbridge watch list           # Check watched folders
+cbridge index                # Force re-index
+```
+
+### Curl Command Fails
+Ensure `curl` is installed:
+```bash
+curl --version               # Check version
+brew install curl            # macOS
+sudo apt install curl        # Linux
+```
+
+---
+
+## 📝 WORKFLOW EXAMPLES
+
+### Example 1: Find Project Budget
+**User asks:** "What was the total budget for Project Alpha?"
+
+**Agent actions:**
+1. Extract keywords: `"Project Alpha budget"`
+2. Execute search:
+```json
+{
+  "command": "curl -s -X POST http://127.0.0.1:9790/api/v1/search -d '{\"query\": \"Project Alpha budget\", \"top_k\": 3}'"
+}
+```
+3. Cite source: "According to `project_alpha_proposal.pdf`, the total budget was $150,000."
+
+### Example 2: Code Review
+**User asks:** "Review this Python function for compliance with our coding standards."
+
+**Agent actions:**
+1. Search for standards: `"Python coding standards"`
+2. Search for examples: `"Python best practices"`
+3. Compare and provide feedback with citations.
+
+---
+
+## 📚 RESOURCES
+
+- **GitHub**: [whyischen/context-bridge](https://github.com/whyischen/context-bridge)
+- **API Docs**: `http://127.0.0.1:9790/docs` (when running)
+- **Config**: `~/.cbridge/config.yaml`
+- **Workspace**: `~/.cbridge/workspace/`

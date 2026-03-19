@@ -38,7 +38,17 @@ Forget about tedious vector database setups. Everything is handled for you.
 
 ### 1. Installation
 
-Install ContextBridge directly from PyPI (requires Python 3.9+):
+**Important: Clean Up Old Versions**
+
+If you have previously installed ContextBridge, old versions in your user directory may override the new version, causing issues (such as i18n not working). Please clean up first:
+
+```bash
+# Remove old versions from user directory
+rm -f ~/Library/Python/*/lib/python/site-packages/cbridge.py
+rm -rf ~/Library/Python/*/lib/python/site-packages/cbridge_agent*
+```
+
+Then install from PyPI (requires Python 3.9+):
 
 ```bash
 pip install cbridge-agent

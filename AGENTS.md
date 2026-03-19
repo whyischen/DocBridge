@@ -44,6 +44,10 @@ context-bridge/
 ├── main.py                       # 主程序入口
 ├── setup.py                      # 包配置
 └── requirements.txt              # 依赖列表
+└── openclaw_skills               # 项目 Openclaw skills 文件夹
+└── docs                          # 官网文档中心
+│   ├── agent-generate            # ai 生成文档目录 
+
 ```
 
 ## 编码规范
@@ -66,6 +70,7 @@ context-bridge/
 4. **国际化**：
    - 使用 `core.i18n.t()` 函数进行文本翻译
    - 支持中文（zh）和英文（en）
+   - 中/英文模式隔离，禁止英文模式输出中文日志的情况。
 
 5. **日志记录**：
    - 使用 `core.utils.logger.setup_logger()` 创建日志记录器

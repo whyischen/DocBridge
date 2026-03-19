@@ -13,6 +13,57 @@ from core.i18n import t
 
 console = Console(stderr=True)
 
+# ============================================================================
+# 进程检测工具函数
+# ============================================================================
+
+def is_process_running(pid: int) -> bool:
+    """检查指定 PID 的进程是否正在运行"""
+    import os
+    import subprocess
+    
+    if sys.platform == "win32":
+        try:
+            result = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}"],
+                capture_output=True,
+                text=True
+            )
+            return str(pid) in result.stdout
+        except Exception:
+            return False
+    else:
+        try:
+            os.kill(pid, 0)
+            return True
+        except (ProcessLookupError, PermissionError):
+            return False
+
+def cleanup_pid_file(pid_file: Path) -> None:
+    """清理无效或存在的 PID 文件"""
+    if pid_file.exists():
+        try:
+            pid_file.unlink()
+        except Exception:
+            pass
+
+def _display_index_summary(result, quiet=False):
+    """Display indexing summary results"""
+    if quiet:
+        return
+    
+    console.print()
+    console.print(t("idx_summary", success=result['success'], failed=result['failed']))
+    
+    # Show failed files if any
+    if result['failed'] > 0 and result.get('failed_files'):
+        console.print()
+        console.print(t("failed_files_header"))
+        for item in result['failed_files'][:5]:  # Show first 5 failures
+            console.print(f"  [red]•[/red] {item['file']}: {item['error'][:100]}")
+        if len(result['failed_files']) > 5:
+            console.print(t("and_more", count=len(result['failed_files']) - 5))
+
 @click.group(help=t("cli_desc"))
 def cli():
     pass
@@ -148,7 +199,7 @@ def init():
             )
             pid_file.parent.mkdir(parents=True, exist_ok=True)
             pid_file.write_text(str(proc.pid))
-            console.print(f"[green]✅ ContextBridge watcher started in background (PID {proc.pid})[/green]")
+            console.print(t("watcher_started_bg", pid=proc.pid))
         else:
             # Unix: traditional double-fork daemonize
             pid = os.fork()
@@ -156,7 +207,7 @@ def init():
                 pid_file = Path.home() / ".cbridge" / "cbridge_watcher.pid"
                 pid_file.parent.mkdir(parents=True, exist_ok=True)
                 pid_file.write_text(str(pid))
-                console.print(f"[green]✅ ContextBridge watcher started in background (PID {pid})[/green]")
+                console.print(t("watcher_started_bg", pid=pid))
             else:
                 # 子进程中启动服务
                 os.chdir("/")
@@ -219,13 +270,13 @@ def watch_add(path, no_index, quiet, background):
         
         if no_index:
             console.print()
-            console.print("[green]✅ 文件夹已添加到监控列表[/green]")
-            console.print("[dim]💡 提示: 使用 'cbridge start' 启动后台监控并自动索引[/dim]")
-            console.print("[dim]💡 提示: 使用 'cbridge index' 手动索引所有文件[/dim]")
+            console.print(t("watch_add_no_index_success"))
+            console.print(t("watch_add_no_index_hint1"))
+            console.print(t("watch_add_no_index_hint2"))
         else:
             # 统计文件数量
             console.print()
-            console.print("[cyan]📂 正在扫描文件夹...[/cyan]")
+            console.print(t("watch_add_scanning"))
             
             from core.parser import SUPPORTED_EXTENSIONS
             target_path = PathLib(path).absolute()
@@ -243,16 +294,16 @@ def watch_add(path, no_index, quiet, background):
                             all_files.append(file_path)
             
             if not all_files:
-                console.print("[yellow]⚠️  未发现支持的文件格式[/yellow]")
-                console.print(f"[dim]支持的格式: {', '.join(SUPPORTED_EXTENSIONS)}[/dim]")
+                console.print(t("watch_add_no_supported_files"))
+                console.print(t("watch_add_supported_formats", formats=', '.join(SUPPORTED_EXTENSIONS)))
                 return
             
-            console.print(f"[green]✅ 发现 {len(all_files)} 个文件需要索引[/green]")
+            console.print(t("watch_add_files_found", count=len(all_files)))
             
             # 如果指定了 background 参数，直接后台执行
             if background:
                 console.print()
-                console.print("[cyan]🚀 启动后台索引进程...[/cyan]")
+                console.print(t("watch_add_starting_background"))
                 
                 # 启动后台索引进程
                 import subprocess
@@ -279,12 +330,12 @@ def watch_add(path, no_index, quiet, background):
                         with open(log_file, "a", encoding="utf-8") as f:
                             subprocess.Popen(cmd, stdout=f, stderr=f)
                     
-                    console.print("[green]✅ 文件夹已添加到监控列表，后台索引已启动[/green]")
-                    console.print("[dim]💡 提示: 使用 'cbridge logs' 查看索引进度[/dim]")
-                    console.print("[dim]💡 提示: 使用 'cbridge status' 查看系统状态[/dim]")
+                    console.print(t("watch_add_background_started"))
+                    console.print(t("watch_add_background_hint1"))
+                    console.print(t("watch_add_background_hint2"))
                 except Exception as e:
-                    console.print(f"[red]❌ 启动后台索引失败: {e}[/red]")
-                    console.print("[yellow]⚠️  将改为前台执行索引...[/yellow]")
+                    console.print(t("watch_add_background_failed", error=e))
+                    console.print(t("watch_add_fallback_foreground"))
                     # 回退到前台执行
                     result = index_dir(target_path, show_progress=not quiet)
                     _display_index_summary(result, quiet)
@@ -292,17 +343,17 @@ def watch_add(path, no_index, quiet, background):
                 # 询问用户是否需要后台执行
                 console.print()
                 if len(all_files) > 10:  # 文件较多时建议后台执行
-                    console.print("[yellow]💡 检测到文件数量较多，建议后台执行以避免阻塞[/yellow]")
+                    console.print(t("watch_add_many_files_hint"))
                 
                 import click
                 use_background = click.confirm(
-                    "是否需要后台执行索引？(后台执行可立即返回，使用 'cbridge logs' 查看进度)",
+                    t("watch_add_background_confirm"),
                     default=len(all_files) > 10
                 )
                 
                 if use_background:
                     console.print()
-                    console.print("[cyan]🚀 启动后台索引进程...[/cyan]")
+                    console.print(t("watch_add_starting_background"))
                     
                     # 启动后台索引进程
                     import subprocess
@@ -319,26 +370,26 @@ def watch_add(path, no_index, quiet, background):
                         else:
                             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                         
-                        console.print("[green]✅ 文件夹已添加到监控列表，后台索引已启动[/green]")
-                        console.print("[dim]💡 提示: 使用 'cbridge logs' 查看索引进度[/dim]")
-                        console.print("[dim]💡 提示: 使用 'cbridge status' 查看系统状态[/dim]")
+                        console.print(t("watch_add_background_started"))
+                        console.print(t("watch_add_background_hint1"))
+                        console.print(t("watch_add_background_hint2"))
                     except Exception as e:
-                        console.print(f"[red]❌ 启动后台索引失败: {e}[/red]")
-                        console.print("[yellow]⚠️  将改为前台执行索引...[/yellow]")
+                        console.print(t("watch_add_background_failed", error=e))
+                        console.print(t("watch_add_fallback_foreground"))
                         # 回退到前台执行
                         result = index_dir(target_path, show_progress=not quiet)
                         _display_index_summary(result, quiet)
                 else:
                     console.print()
-                    console.print("[cyan]🔄 开始前台索引...[/cyan]")
+                    console.print(t("watch_add_starting_foreground"))
                     # 执行向量化并显示进度
                     result = index_dir(target_path, show_progress=not quiet)
                     _display_index_summary(result, quiet)
                     
                     console.print()
-                    console.print("[green]✅ 文件夹已添加到监控列表并完成索引[/green]")
-                    console.print("[dim]💡 提示: 使用 'cbridge start' 启动后台监控[/dim]")
-                    console.print("[dim]💡 提示: 使用 'cbridge logs' 查看实时日志[/dim]")
+                    console.print(t("watch_add_foreground_complete"))
+                    console.print(t("watch_add_foreground_hint1"))
+                    console.print(t("watch_add_foreground_hint2"))
     else:
         console.print(t("watch_add_exists", path=path))
 
@@ -358,12 +409,12 @@ def watch_remove(path, skip_cleanup, wait):
     console.print(t("watch_remove_success", path=path))
     
     if skip_cleanup:
-        console.print("[yellow]⚠️  已跳过向量数据清理[/yellow]")
-        console.print("[dim]💡 提示: 向量数据仍保留在数据库中[/dim]")
+        console.print(t("cleanup_skip_warning"))
+        console.print(t("cleanup_skip_hint"))
         return
     
     console.print()
-    console.print("[cyan]🔄 正在扫描文件夹...[/cyan]")
+    console.print(t("cleanup_scanning"))
     
     try:
         from core.parser import SUPPORTED_EXTENSIONS
@@ -384,16 +435,16 @@ def watch_remove(path, skip_cleanup, wait):
                         files_to_delete.append(file_path.name)
         
         if not files_to_delete:
-            console.print("[yellow]⚠️  未找到需要清理的文件[/yellow]")
+            console.print(t("cleanup_no_files"))
             return
         
-        console.print(f"[green]✅ 发现 {len(files_to_delete)} 个文件需要清理[/green]")
+        console.print(t("cleanup_files_found", count=len(files_to_delete)))
         
         if not wait:
             console.print()
-            console.print("[cyan]🚀 清理任务已转入后台执行[/cyan]")
-            console.print(f"[dim]💡 使用 'cbridge logs -f' 查看实时清理进度[/dim]")
-            console.print(f"[dim]📝 日志文件: {PathLib.home() / '.cbridge' / 'logs' / 'cbridge-watcher.log'}[/dim]")
+            console.print(t("cleanup_background"))
+            console.print(t("cleanup_progress_hint"))
+            console.print(t("cleanup_log_file", path=PathLib.home() / '.cbridge' / 'logs' / 'cbridge-watcher.log'))
         
         # 后台清理函数
         def cleanup_vectors():
@@ -417,17 +468,17 @@ def watch_remove(path, skip_cleanup, wait):
                             success_count += 1
                             logger.info(f"[{idx}/{len(files_to_delete)}] ✅ 已删除: {filename}")
                             if wait:
-                                console.print(f"[green]✅ [{idx}/{len(files_to_delete)}][/green] {filename}")
+                                console.print(t("cleanup_deleted", idx=idx, total=len(files_to_delete), filename=filename))
                         else:
                             failed_count += 1
                             logger.warning(f"[{idx}/{len(files_to_delete)}] ⚠️  未找到: {filename}")
                             if wait:
-                                console.print(f"[yellow]⚠️  [{idx}/{len(files_to_delete)}][/yellow] {filename} (未找到)")
+                                console.print(t("cleanup_not_found", idx=idx, total=len(files_to_delete), filename=filename))
                     except Exception as e:
                         failed_count += 1
                         logger.error(f"[{idx}/{len(files_to_delete)}] ❌ 删除失败: {filename} - {e}")
                         if wait:
-                            console.print(f"[red]❌ [{idx}/{len(files_to_delete)}][/red] {filename} - {e}")
+                            console.print(t("cleanup_failed", idx=idx, total=len(files_to_delete), filename=filename, error=e))
                 
                 # 输出汇总
                 logger.info("=" * 50)
@@ -440,33 +491,38 @@ def watch_remove(path, skip_cleanup, wait):
                 
                 if wait:
                     console.print()
-                    console.print("[bold cyan]📊 清理汇总[/bold cyan]")
-                    console.print(f"[dim]总文件数:[/dim] {len(files_to_delete)}")
-                    console.print(f"[green]成功:[/green] {success_count}")
-                    console.print(f"[yellow]失败/未找到:[/yellow] {failed_count}")
+                    console.print(t("cleanup_summary_header"))
+                    console.print(t("cleanup_total", count=len(files_to_delete)))
+                    console.print(t("cleanup_success", count=success_count))
+                    console.print(t("cleanup_failed_count", count=failed_count))
                     console.print()
-                    console.print("[green]✅ 向量数据清理完成[/green]")
+                    console.print(t("cleanup_complete"))
                 
             except Exception as e:
                 logger.error(f"❌ 清理过程出错: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
                 if wait:
-                    console.print(f"[red]❌ 清理过程出错: {e}[/red]")
+                    console.print(t("cleanup_error", error=e))
         
         # 启动后台线程
-        cleanup_thread = threading.Thread(target=cleanup_vectors, daemon=False, name="VectorCleanup")
+        # 使用守护线程避免解释器关闭时的竞态条件
+        cleanup_thread = threading.Thread(target=cleanup_vectors, daemon=True, name="VectorCleanup")
         cleanup_thread.start()
         
         # 如果用户选择等待，则阻塞直到完成
         if wait:
             console.print()
-            console.print("[dim]正在清理，请稍候...[/dim]")
+            console.print(t("cleanup_in_progress"))
             console.print()
             cleanup_thread.join()
+        else:
+            # 给后台线程一点时间完成初始化，避免解释器关闭时的竞态条件
+            import time
+            time.sleep(0.5)
         
     except Exception as e:
-        console.print(f"[red]❌ 启动清理任务失败: {e}[/red]")
+        console.print(t("cleanup_start_failed", error=e))
         import traceback
         traceback.print_exc()
 
@@ -518,6 +574,40 @@ def start(foreground):
     log_dir = Path.home() / ".cbridge" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     
+    # 同模式检测：检查是否已有 watcher 进程在运行（start 模式）
+    watcher_pid_file = Path.home() / ".cbridge" / "cbridge_watcher.pid"
+    if not foreground and watcher_pid_file.exists():
+        try:
+            pid = int(watcher_pid_file.read_text().strip())
+            if is_process_running(pid):
+                console.print(t("watcher_already_running", pid=pid))
+                console.print(t("stop_first_hint"))
+                sys.exit(1)
+        except (ProcessLookupError, ValueError):
+            # 进程不存在，清理旧 PID 文件
+            watcher_pid_file.unlink()
+    
+    # 检测 API 服务器是否在运行（serve 模式）
+    serve_pid_file = Path.home() / ".cbridge" / "cbridge.pid"
+    if serve_pid_file.exists():
+        try:
+            pid = int(serve_pid_file.read_text().strip())
+            if is_process_running(pid):
+                console.print(t("api_server_detected", pid=pid))
+                console.print(t("api_has_watcher"))
+                console.print()
+                console.print(t("suggestion_header"))
+                console.print(t("suggestion_serve_fg"))
+                console.print(t("suggestion_stop_api"))
+                console.print()
+                if not click.confirm(t("continue_watcher_confirm"), default=False):
+                    console.print(t("cancelled_watcher"))
+                    return
+                console.print(t("continuing_watcher"))
+                console.print()
+        except (ValueError, FileNotFoundError):
+            cleanup_pid_file(serve_pid_file)
+    
     if not foreground:
         # 后台运行模式
         if sys.platform == "win32":
@@ -535,10 +625,10 @@ def start(foreground):
             )
             pid_file.parent.mkdir(parents=True, exist_ok=True)
             pid_file.write_text(str(proc.pid))
-            console.print(f"[green]✅ ContextBridge watcher started in background (PID {proc.pid})[/green]")
-            console.print(f"[dim]📝 Logs: {Path.home() / '.cbridge' / 'logs' / 'cbridge-watcher.log'}[/dim]")
-            console.print(f"[dim]💡 Use 'cbridge logs -f' to view real-time logs[/dim]")
-            console.print(f"[dim]💡 Use 'cbridge stop' to stop the watcher[/dim]")
+            console.print(t("watcher_started_bg", pid=proc.pid))
+            console.print(t("logs_location", path=Path.home() / '.cbridge' / 'logs' / 'cbridge-watcher.log'))
+            console.print(t("logs_view_hint"))
+            console.print(t("stop_hint"))
             return
         else:
             # Unix: traditional double-fork daemonize
@@ -547,10 +637,10 @@ def start(foreground):
                 pid_file = Path.home() / ".cbridge" / "cbridge_watcher.pid"
                 pid_file.parent.mkdir(parents=True, exist_ok=True)
                 pid_file.write_text(str(pid))
-                console.print(f"[green]✅ ContextBridge watcher started in background (PID {pid})[/green]")
-                console.print(f"[dim]📝 Logs: {Path.home() / '.cbridge' / 'logs' / 'cbridge-watcher.log'}[/dim]")
-                console.print(f"[dim]💡 Use 'cbridge logs -f' to view real-time logs[/dim]")
-                console.print(f"[dim]💡 Use 'cbridge stop' to stop the watcher[/dim]")
+                console.print(t("watcher_started_bg", pid=pid))
+                console.print(t("logs_location", path=Path.home() / '.cbridge' / 'logs' / 'cbridge-watcher.log'))
+                console.print(t("logs_view_hint"))
+                console.print(t("stop_hint"))
                 return
             os.chdir("/")
             os.setsid()
@@ -577,9 +667,9 @@ def start(foreground):
         console.print(t("start_init"))
         init_workspace()
         console.print(t("start_engine"))
-        console.print("[green]✅ ContextBridge watcher is running in foreground...[/green]")
+        console.print(t("watcher_running_fg"))
         console.print()
-        console.print("[dim]Press Ctrl+C to stop[/dim]")
+        console.print(t("press_ctrl_c"))
         console.print()
         start_watching()
         return
@@ -605,7 +695,7 @@ def start(foreground):
         console.print(t("start_init"))
         init_workspace()
         console.print(t("start_engine"))
-        console.print("[green]✅ ContextBridge watcher is running...[/green]")
+        console.print(t("watcher_running"))
         start_watching()
     except Exception as e:
         console.print(f"[bold red]❌ Error: {e}[/bold red]")
@@ -624,9 +714,43 @@ def serve(port, host, foreground):
     import signal
     from core.utils.logger import setup_logger
     
-    # Step 1: Stop any running serve daemon
+    # Step 1: 同模式检测 - 检查是否已有 serve 进程在运行
     pid_file = Path.home() / ".cbridge" / "cbridge.pid"
+    if pid_file.exists():
+        try:
+            pid = int(pid_file.read_text().strip())
+            if is_process_running(pid):
+                console.print(t("api_already_running", pid=pid))
+                console.print(t("stop_first_hint"))
+                sys.exit(1)
+        except (ProcessLookupError, ValueError):
+            # 进程不存在，清理旧 PID 文件
+            pid_file.unlink()
     
+    # Step 2: 检测并停止正在运行的 watcher 进程（start 模式）- 保留现有逻辑
+    watcher_pid_file = Path.home() / ".cbridge" / "cbridge_watcher.pid"
+    if watcher_pid_file.exists():
+        try:
+            pid = int(watcher_pid_file.read_text().strip())
+            if is_process_running(pid):
+                # 自动停止 watcher 进程
+                if sys.platform == "win32":
+                    import subprocess
+                    subprocess.run(["taskkill", "/PID", str(pid), "/F"], check=True, capture_output=True)
+                else:
+                    os.kill(pid, signal.SIGTERM)
+                watcher_pid_file.unlink()
+                console.print(t("watcher_auto_stopped"))
+            else:
+                # 进程不存在，清理 PID 文件
+                cleanup_pid_file(watcher_pid_file)
+        except (ValueError, FileNotFoundError):
+            cleanup_pid_file(watcher_pid_file)
+        except PermissionError:
+            console.print(t("no_permission_stop_watcher", pid=pid))
+            sys.exit(1)
+    
+    # Step 3: Stop any running serve daemon (cleanup stale PID files)
     if pid_file.exists():
         try:
             pid = int(pid_file.read_text().strip())
@@ -660,7 +784,7 @@ def serve(port, host, foreground):
                 continue
                 
     if available_port != original_port:
-        console.print(f"[yellow]⚠️ Port {original_port} is in use. Falling back to port {available_port}.[/yellow]")
+        console.print(t("port_in_use", original=original_port, new=available_port))
         port = available_port
 
     # Default to daemon mode unless --foreground is specified
@@ -692,6 +816,10 @@ def serve(port, host, foreground):
             # Unix: traditional double-fork daemonize
             pid = os.fork()
             if pid > 0:
+                # 写入 PID 文件
+                pid_file = Path.home() / ".cbridge" / "cbridge.pid"
+                pid_file.parent.mkdir(parents=True, exist_ok=True)
+                pid_file.write_text(str(pid))
                 console.print(t("serve_daemon_start", pid=pid))
                 console.print(t("serve_daemon_url", host=host, port=port))
                 console.print(f"[dim]📝 Logs: {Path.home() / '.cbridge' / 'logs' / 'cbridge-serve.log'}[/dim]")
@@ -749,12 +877,12 @@ def stop():
             else:
                 os.kill(pid, signal.SIGTERM)
             watcher_pid_file.unlink()
-            console.print(f"[green]✅ Watcher (PID {pid}) stopped.[/green]")
+            console.print(t("watcher_stopped", pid=pid))
         except (ProcessLookupError, subprocess.CalledProcessError):
-            console.print(f"[yellow]⚠️  Watcher process not found, cleaning up PID file.[/yellow]")
+            console.print(t("watcher_not_found"))
             watcher_pid_file.unlink()
         except PermissionError:
-            console.print(f"[red]❌ Permission denied to stop watcher process.[/red]")
+            console.print(t("no_permission_stop"))
             sys.exit(1)
     
     # Try to stop serve daemon
@@ -767,16 +895,16 @@ def stop():
             else:
                 os.kill(pid, signal.SIGTERM)
             pid_file.unlink()
-            console.print(f"[green]✅ Daemon (PID {pid}) stopped.[/green]")
+            console.print(t("daemon_stopped", pid=pid))
         except (ProcessLookupError, subprocess.CalledProcessError):
-            console.print(f"[yellow]⚠️  Process {pid} not found, cleaning up PID file.[/yellow]")
+            console.print(t("process_not_found", pid=pid))
             pid_file.unlink()
         except PermissionError:
-            console.print(f"[red]❌ Permission denied to stop process {pid}.[/red]")
+            console.print(t("no_permission_stop_process", pid=pid))
             sys.exit(1)
     
     if not pid_file.exists() and not watcher_pid_file.exists():
-        console.print("[yellow]⚠️  No daemon PID files found. Is any daemon running?[/yellow]")
+        console.print(t("no_daemon_found"))
         sys.exit(1)
 
 @cli.command(help=t("search_desc"))
@@ -955,16 +1083,16 @@ def status():
                     text=True
                 )
                 if str(pid) in result.stdout:
-                    console.print(f"[green]✅ Watcher: Running (PID {pid})[/green]")
+                    console.print(t("watcher_status_running", pid=pid))
                 else:
-                    console.print(f"[yellow]⚠️  Watcher: Not running (stale PID {pid})[/yellow]")
+                    console.print(t("watcher_status_stale", pid=pid))
             else:
                 if os.kill(pid, 0) is None:
-                    console.print(f"[green]✅ Watcher: Running (PID {pid})[/green]")
+                    console.print(t("watcher_status_running", pid=pid))
         except (ProcessLookupError, ValueError):
-            console.print("[yellow]⚠️  Watcher: Not running[/yellow]")
+            console.print(t("watcher_status_not_running"))
     else:
-        console.print("[yellow]⚠️  Watcher: Not running[/yellow]")
+        console.print(t("watcher_status_not_running"))
     
     # Check serve daemon status
     serve_pid_file = Path.home() / ".cbridge" / "cbridge.pid"
@@ -979,16 +1107,16 @@ def status():
                     text=True
                 )
                 if str(pid) in result.stdout:
-                    console.print(f"[green]✅ API Server: Running (PID {pid})[/green]")
+                    console.print(t("api_status_running", pid=pid))
                 else:
-                    console.print(f"[yellow]⚠️  API Server: Not running (stale PID {pid})[/yellow]")
+                    console.print(t("api_status_stale", pid=pid))
             else:
                 if os.kill(pid, 0) is None:
-                    console.print(f"[green]✅ API Server: Running (PID {pid})[/green]")
+                    console.print(t("api_status_running", pid=pid))
         except (ProcessLookupError, ValueError):
-            console.print("[yellow]⚠️  API Server: Not running[/yellow]")
+            console.print(t("api_status_not_running"))
     else:
-        console.print("[yellow]⚠️  API Server: Not running[/yellow]")
+        console.print(t("api_status_not_running"))
 
 @cli.command(help=t("logs_desc"))
 @click.option('--lines', '-n', default=50, help=t("logs_lines_help"))

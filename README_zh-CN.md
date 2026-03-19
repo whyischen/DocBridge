@@ -38,7 +38,17 @@
 
 ### 1. 安装 ContextBridge
 
-直接通过 PyPI 安装（需要 Python 3.9+ 环境）：
+**重要：清理旧版本**
+
+如果你之前安装过 ContextBridge，用户目录中的旧版本可能会覆盖新版本，导致功能异常（如国际化不生效）。请先执行清理：
+
+```bash
+# 删除用户目录中的旧版本
+rm -f ~/Library/Python/*/lib/python/site-packages/cbridge.py
+rm -rf ~/Library/Python/*/lib/python/site-packages/cbridge_agent*
+```
+
+然后通过 PyPI 安装（需要 Python 3.9+ 环境）：
 
 ```bash
 pip install cbridge-agent
