@@ -129,11 +129,19 @@ class QMDRuntime(ISearchRuntime):
             formatted_results = []
             if results['documents'] and len(results['documents']) > 0:
                 for i in range(len(results['documents'][0])):
+                    # ChromaDB returns distances (lower = more similar)
+                    # Convert to similarity score (higher = more similar)
+                    distance = results['distances'][0][i] if 'distances' in results and results['distances'] else 1.0
+                    # Convert distance to similarity: 1 / (1 + distance)
+                    # This maps: distance 0 -> similarity 1.0, distance ∞ -> similarity 0.0
+                    similarity = 1.0 / (1.0 + distance)
+                    
                     formatted_results.append({
                         "id": results['ids'][0][i],
                         "text": results['documents'][0][i],
                         "metadata": results['metadatas'][0][i],
-                        "score": results['distances'][0][i] if 'distances' in results and results['distances'] else 0.0
+                        "score": similarity,
+                        "distance": distance  # Keep original distance for debugging
                     })
             return formatted_results
         except Exception as e:

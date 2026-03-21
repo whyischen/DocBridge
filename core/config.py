@@ -14,8 +14,21 @@ def load_config():
             # Ensure language defaults to English if not specified
             if "language" not in config:
                 config["language"] = "en"
+            # Ensure search config has defaults
+            if "search" not in config:
+                config["search"] = {
+                    "min_similarity": 0.5,
+                    "default_top_k": 5
+                }
             return config
-    return {"mode": "embedded", "language": "en"}
+    return {
+        "mode": "embedded", 
+        "language": "en",
+        "search": {
+            "min_similarity": 0.5,
+            "default_top_k": 5
+        }
+    }
 
 def save_config(config_data):
     # Ensure config directory exists
@@ -92,7 +105,11 @@ def auto_configure(workspace_dir=None):
         "mode": "embedded",
         "workspace_dir": workspace_dir or str(Path.home() / ".cbridge" / "workspace"),
         "watch_dirs": [],
-        "pdf_parser_strategy": "markitdown"  # "markitdown" or "docling"
+        "pdf_parser_strategy": "markitdown",  # "markitdown" or "docling"
+        "search": {
+            "min_similarity": 0.5,  # Minimum similarity threshold (0.0-1.0)
+            "default_top_k": 5      # Default number of results
+        }
     }
 
     # 保存配置
@@ -120,6 +137,8 @@ def init_workspace():
         
     # Inject demo doc out of the box
     demo_doc = RAW_DOCS_DIR / "Welcome_to_ContextBridge.md"
+    demo_needs_indexing = False
+    
     if not demo_doc.exists():
         demo_content = (
             "# Welcome to ContextBridge!\n\n"
@@ -135,16 +154,70 @@ def init_workspace():
         )
         with open(demo_doc, "w", encoding="utf-8") as f:
             f.write(demo_content)
+        demo_needs_indexing = True
             
+    # Index demo doc if it was just created or check if it needs indexing
+    if demo_needs_indexing:
         try:
             from core.factories import initialize_system
+            import logging
+            logger = logging.getLogger(__name__)
+            
             cm = initialize_system()
-            # Demo doc is .md, no need to copy to parsed_docs
-            cm.write_context(demo_doc.name, demo_content, level="L2")
+            demo_content = demo_doc.read_text(encoding="utf-8")
+            success = cm.write_context(demo_doc.name, demo_content, level="L2")
+            
+            if success:
+                logger.info(f"✅ Demo document indexed: {demo_doc.name}")
+            else:
+                logger.warning(f"⚠️ Failed to index demo document: {demo_doc.name}")
         except Exception as e:
-            pass
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"❌ Error indexing demo document: {e}", exc_info=True)
 
     from core.i18n import t
     from rich.console import Console
     console = Console(stderr=True)
     console.print(t("workspace_init", dir=WORKSPACE_DIR))
+
+
+def get_search_config():
+    """
+    获取搜索配置参数
+    
+    Returns:
+        dict: 包含 min_similarity 和 default_top_k 的字典
+    """
+    search_config = CONFIG.get("search", {})
+    return {
+        "min_similarity": search_config.get("min_similarity", 0.5),
+        "default_top_k": search_config.get("default_top_k", 5)
+    }
+
+def update_search_config(min_similarity=None, default_top_k=None):
+    """
+    更新搜索配置参数
+    
+    Args:
+        min_similarity: 最小相似度阈值 (0.0-1.0)
+        default_top_k: 默认返回结果数量
+    
+    Returns:
+        bool: 更新是否成功
+    """
+    if "search" not in CONFIG:
+        CONFIG["search"] = {}
+    
+    if min_similarity is not None:
+        if not 0.0 <= min_similarity <= 1.0:
+            return False
+        CONFIG["search"]["min_similarity"] = min_similarity
+    
+    if default_top_k is not None:
+        if default_top_k < 1:
+            return False
+        CONFIG["search"]["default_top_k"] = default_top_k
+    
+    save_config(CONFIG)
+    return True

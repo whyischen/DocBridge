@@ -16,3 +16,4 @@ cbridge_agent.egg-info/
 .idea
 .claude
 test
+agent-generate

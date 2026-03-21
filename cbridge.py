@@ -910,13 +910,23 @@ def stop():
 
 @cli.command(help=t("search_desc"))
 @click.argument('query')
-@click.option('--top-k', default=5, help='Number of results to return (default: 5)')
-@click.option('--threshold', default=0.5, type=float, help='Minimum similarity score threshold, 0.0-1.0 (default: 0.5)')
+@click.option('--top-k', default=None, type=int, help='Number of results to return (uses config default if not specified)')
+@click.option('--threshold', default=None, type=float, help='Minimum similarity score threshold, 0.0-1.0 (uses config default if not specified)')
 @click.option('--rerank/--no-rerank', default=True, help='Enable/disable keyword-based reranking (default: enabled)')
 @click.option('--explain/--no-explain', default=True, help='Show/hide detailed explanation for each result (default: enabled)')
 def search(query, top_k, threshold, rerank, explain):
+    from core.config import get_search_config
+    
     context_manager = initialize_system()
-    results = context_manager.recursive_retrieve(query, top_k=top_k * 2 if rerank else top_k)
+    
+    # Use config defaults if not specified
+    search_config = get_search_config()
+    if top_k is None:
+        top_k = search_config['default_top_k']
+    if threshold is None:
+        threshold = search_config['min_similarity']
+    
+    results = context_manager.recursive_retrieve(query, top_k=top_k * 2 if rerank else top_k, min_similarity=threshold)
     
     if not results:
         console.print(t("search_empty"))
@@ -1205,6 +1215,49 @@ def config():
         console.print("-" * 40)
     else:
         console.print(t("config_not_found"))
+
+@cli.group(help="Manage search configuration")
+def search_config():
+    """Manage search configuration settings"""
+    pass
+
+@search_config.command(name="show", help="Show current search configuration")
+def show_search_config():
+    from core.config import get_search_config
+    config = get_search_config()
+    console.print("\n[bold cyan]Current Search Configuration:[/bold cyan]")
+    console.print(f"  Min Similarity Threshold: [yellow]{config['min_similarity']}[/yellow] (0.0-1.0)")
+    console.print(f"  Default Top K Results: [yellow]{config['default_top_k']}[/yellow]")
+    console.print("\n[dim]To modify these settings, use: cbridge search-config set[/dim]\n")
+
+@search_config.command(name="set", help="Update search configuration")
+@click.option('--min-similarity', type=float, help='Minimum similarity threshold (0.0-1.0)')
+@click.option('--default-top-k', type=int, help='Default number of results to return')
+def set_search_config(min_similarity, default_top_k):
+    from core.config import update_search_config, get_search_config
+    
+    if min_similarity is None and default_top_k is None:
+        console.print("[yellow]No parameters specified. Use --min-similarity or --default-top-k[/yellow]")
+        return
+    
+    if min_similarity is not None and not (0.0 <= min_similarity <= 1.0):
+        console.print("[red]Error: min-similarity must be between 0.0 and 1.0[/red]")
+        return
+    
+    if default_top_k is not None and default_top_k < 1:
+        console.print("[red]Error: default-top-k must be at least 1[/red]")
+        return
+    
+    success = update_search_config(min_similarity=min_similarity, default_top_k=default_top_k)
+    
+    if success:
+        console.print("[green]✓[/green] Search configuration updated successfully!")
+        config = get_search_config()
+        console.print(f"  Min Similarity: [yellow]{config['min_similarity']}[/yellow]")
+        console.print(f"  Default Top K: [yellow]{config['default_top_k']}[/yellow]")
+    else:
+        console.print("[red]Failed to update search configuration[/red]")
+
 
 @cli.command(help=t("mcp_desc"))
 def mcp():

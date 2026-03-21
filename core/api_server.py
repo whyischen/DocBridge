@@ -26,7 +26,8 @@ def get_context_manager():
 # Models
 class SearchRequest(BaseModel):
     query: str
-    top_k: int = 5
+    top_k: Optional[int] = None  # Use config default if not specified
+    min_similarity: Optional[float] = None  # Use config default if not specified
 
 class SearchResult(BaseModel):
     uri: str
@@ -54,7 +55,11 @@ async def search_documents(request: SearchRequest):
     """
     try:
         cm = get_context_manager()
-        results = cm.recursive_retrieve(request.query, top_k=request.top_k)
+        results = cm.recursive_retrieve(
+            request.query, 
+            top_k=request.top_k,
+            min_similarity=request.min_similarity
+        )
         
         formatted_results = []
         for res in results:

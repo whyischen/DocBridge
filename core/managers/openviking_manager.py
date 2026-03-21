@@ -15,7 +15,13 @@ class OpenVikingManager(IContextManager):
         self.mount_path = config.get("openviking", {}).get("mount_path", "viking://contextbridge/")
         self.collection_name = config.get("qmd", {}).get("collection", "cb_documents")
         
+        # Load search configuration
+        search_config = config.get("search", {})
+        self.default_min_similarity = search_config.get("min_similarity", 0.5)
+        self.default_top_k = search_config.get("default_top_k", 5)
+        
         logger.debug(f"Initializing embedded OpenViking manager, mount path: {self.mount_path}")
+        logger.debug(f"Search config: min_similarity={self.default_min_similarity}, default_top_k={self.default_top_k}")
 
     def _generate_l0_abstract(self, content: str) -> str:
         # 兼容保留原有 API 形式，但不再使用
@@ -102,20 +108,38 @@ class OpenVikingManager(IContextManager):
             logger.error(f"Error deleting context for {filename}: {e}", exc_info=True)
             return False
 
-    def recursive_retrieve(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def recursive_retrieve(self, query: str, top_k: int = None, min_similarity: float = None) -> List[Dict[str, Any]]:
         try:
+            # Use configured defaults if not specified
+            if top_k is None:
+                top_k = self.default_top_k
+            if min_similarity is None:
+                min_similarity = self.default_min_similarity
+            
             logger.debug(f"🔍 [OpenViking] Recursive Searching: {query}")
+            logger.debug(f"Parameters: top_k={top_k}, min_similarity={min_similarity}")
             
             # Phase 1: 意图宽筛 (Search in L0 and L1)
             phase1_results = self.search_runtime.hybrid_search(
                 collection_name=self.collection_name,
                 query_text=query,
-                top_k=3, 
+                top_k=5,  # Increased to get more candidates
                 where={"level": {"$in": ["L0", "L1"]}}
             )
             
             if not phase1_results:
                 return []
+            
+            # Filter Phase 1 results by minimum similarity threshold
+            phase1_results = [r for r in phase1_results if r.get("score", 0.0) >= min_similarity]
+            
+            if not phase1_results:
+                logger.debug(f"No results passed Phase 1 similarity threshold ({min_similarity})")
+                return []
+            
+            logger.debug(f"Phase 1: {len(phase1_results)} documents passed similarity threshold")
+            for res in phase1_results[:3]:
+                logger.debug(f"  - {res.get('metadata', {}).get('filename', 'unknown')}: score={res.get('score', 0.0):.3f}")
                 
             # 提取高相关度的 URI
             matched_uris = set()
@@ -142,9 +166,12 @@ class OpenVikingManager(IContextManager):
             phase2_results = self.search_runtime.hybrid_search(
                 collection_name=self.collection_name,
                 query_text=query,
-                top_k=top_k * 2, # 多捞一点便于组装
+                top_k=top_k * 3, # 多捞一点便于组装
                 where=where_clause
             )
+            
+            # Filter Phase 2 results by minimum similarity threshold
+            phase2_results = [r for r in phase2_results if r.get("score", 0.0) >= min_similarity]
             
             # 3. 组装并返回最终级联上下文
             assembled_context = {}
@@ -168,8 +195,10 @@ class OpenVikingManager(IContextManager):
                         assembled_context[uri]["score"] = score
                         
                 assembled_context[uri]["relevant_excerpts"].append(chunk_text)
-                
-            return list(assembled_context.values())
+            
+            # Sort by score and return top results
+            results = sorted(assembled_context.values(), key=lambda x: x["score"], reverse=True)
+            return results[:top_k * 2]  # Return more for potential reranking
         except Exception as e:
             logger.error(f"Error retrieving context for query '{query}': {e}", exc_info=True)
             return []
