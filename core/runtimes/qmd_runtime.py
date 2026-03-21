@@ -73,6 +73,31 @@ class QMDRuntime(ISearchRuntime):
             logger.error(f"Error upserting document {doc_id}: {e}", exc_info=True)
             return False
 
+    def upsert_batch(self, collection_name: str, doc_ids: List[str], vectors: List[List[float]], payloads: List[Dict[str, Any]]) -> bool:
+        try:
+            self._ensure_initialized()
+            if not self.collection:
+                logger.error("Collection not initialized")
+                return False
+            
+            texts = []
+            clean_payloads = []
+            for p in payloads:
+                # payload might be original object or copy, safest to make a copy
+                p_copy = p.copy()
+                texts.append(p_copy.pop("text", ""))
+                clean_payloads.append(p_copy)
+                
+            self.collection.upsert(
+                documents=texts,
+                metadatas=clean_payloads,
+                ids=doc_ids
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error bulk upserting documents: {e}", exc_info=True)
+            return False
+
     def delete_by_uri(self, collection_name: str, uri: str) -> bool:
         try:
             self._ensure_initialized()
@@ -85,16 +110,21 @@ class QMDRuntime(ISearchRuntime):
             logger.error(f"Error deleting document with uri {uri}: {e}", exc_info=True)
             return False
 
-    def hybrid_search(self, collection_name: str, query_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def hybrid_search(self, collection_name: str, query_text: str, top_k: int = 5, where: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         try:
             self._ensure_initialized()
             if not self.collection:
                 logger.error("Collection not initialized")
                 return []
-            results = self.collection.query(
-                query_texts=[query_text],
-                n_results=top_k
-            )
+
+            query_args = {
+                "query_texts": [query_text],
+                "n_results": top_k
+            }
+            if where:
+                query_args["where"] = where
+
+            results = self.collection.query(**query_args)
             
             formatted_results = []
             if results['documents'] and len(results['documents']) > 0:

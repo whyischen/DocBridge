@@ -4,7 +4,12 @@ from typing import List, Dict, Any
 class ISearchRuntime(ABC):
     @abstractmethod
     def upsert(self, collection_name: str, doc_id: str, vector: List[float], payload: Dict[str, Any]) -> bool:
-        """底层写入：插入或更新向量和元数据"""
+        """底层写入：插入或更新单条向量和元数据"""
+        pass
+
+    @abstractmethod
+    def upsert_batch(self, collection_name: str, doc_ids: List[str], vectors: List[List[float]], payloads: List[Dict[str, Any]]) -> bool:
+        """底层写入：批量插入或更新多条向量和元数据"""
         pass
 
     @abstractmethod
@@ -13,7 +18,7 @@ class ISearchRuntime(ABC):
         pass
 
     @abstractmethod
-    def hybrid_search(self, collection_name: str, query_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def hybrid_search(self, collection_name: str, query_text: str, top_k: int = 5, where: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """底层检索：执行向量与关键词的混合检索"""
         pass
 
