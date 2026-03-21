@@ -588,11 +588,8 @@ def start(foreground):
                 console.print(t("suggestion_serve_fg"))
                 console.print(t("suggestion_stop_api"))
                 console.print()
-                if not click.confirm(t("continue_watcher_confirm"), default=False):
-                    console.print(t("cancelled_watcher"))
-                    return
-                console.print(t("continuing_watcher"))
-                console.print()
+                console.print(t("cancelled_watcher"))
+                return
         except (ValueError, FileNotFoundError):
             cleanup_pid_file(serve_pid_file)
     
@@ -740,10 +737,10 @@ def serve(port, host, foreground):
     
     # Step 3: Stop any running serve daemon (cleanup stale PID files)
     if pid_file.exists():
+        import subprocess
         try:
             pid = int(pid_file.read_text().strip())
             if sys.platform == "win32":
-                import subprocess
                 subprocess.run(["taskkill", "/PID", str(pid), "/F"], check=True, capture_output=True)
             else:
                 os.kill(pid, signal.SIGTERM)
@@ -852,6 +849,7 @@ def serve(port, host, foreground):
 def stop():
     import os
     import signal
+    import subprocess
     pid_file = Path.home() / ".cbridge" / "cbridge.pid"
     watcher_pid_file = Path.home() / ".cbridge" / "cbridge_watcher.pid"
     

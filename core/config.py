@@ -110,7 +110,13 @@ def init_workspace():
     
     # Ensure all watch dirs exist
     for d in get_watch_dirs():
-        d.mkdir(parents=True, exist_ok=True)
+        if d.is_file():
+            # If it explicitly exists as a file, skip mkdir
+            continue
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except FileExistsError:
+            pass
         
     # Inject demo doc out of the box
     demo_doc = RAW_DOCS_DIR / "Welcome_to_ContextBridge.md"
