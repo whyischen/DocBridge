@@ -47,7 +47,7 @@ context-bridge/
 └── requirements.txt              # 依赖列表
 └── openclaw_skills               # 项目 Openclaw skills 文件夹
 └── docs                          # 官网文档中心
-│   ├── agent-generate            # **AI助手总结文档生成目录！** 
+│   ├── agent-generate            # **AI助手总结文档生成目录！** 新任务不参考这个目录的文档
 
 ```
 

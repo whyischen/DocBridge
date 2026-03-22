@@ -3,7 +3,8 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent, CallToolRequest
 from core.factories import initialize_system
-from core.config import init_workspace
+from core.config import init_workspace, get_watch_dirs, PARSED_DOCS_DIR
+from core.utils.path_resolver import PathResolver
 
 app = Server("context-bridge")
 _context_manager = None
@@ -77,6 +78,24 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         
         if not results:
             return [TextContent(type="text", text="No relevant information found.")]
+        
+        # Initialize PathResolver and resolve paths for all results
+        path_resolver = PathResolver({
+            'watch_dirs': get_watch_dirs(),
+            'parsed_docs_dir': PARSED_DOCS_DIR
+        })
+        
+        for res in results:
+            filename = res.get('filename', 'Unknown')
+            uri = res.get('uri', 'Unknown')
+            try:
+                full_content_path = path_resolver.resolve_path(filename, uri)
+                res['full_content_path'] = full_content_path
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to resolve path for {filename}: {e}")
+                res['full_content_path'] = ""
             
         response_text = "Found the following relevant documents:\n\n"
         for idx, res in enumerate(results, 1):
@@ -85,9 +104,17 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             abstract = res.get('abstract', '')
             excerpts = res.get('relevant_excerpts', [])
             score = res.get('score', 0.0)
+            full_content_path = res.get('full_content_path', '')
             
             response_text += f"### {idx}. {filename}\n"
             response_text += f"**Source:** {source}\n"
+            
+            # Add path information
+            if full_content_path:
+                response_text += f"**File Path:** {full_content_path}\n"
+            else:
+                response_text += f"**File Path:** Not available\n"
+            
             response_text += f"**Relevance Score:** {score*100:.1f}%\n"
             
             # Add score breakdown if explain mode is enabled

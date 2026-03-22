@@ -915,7 +915,8 @@ def stop():
 @click.option('--rerank/--no-rerank', default=True, help='Enable/disable advanced reranking with BM25 + keywords + position (default: enabled)')
 @click.option('--explain/--no-explain', default=True, help='Show/hide detailed score breakdown for each result (default: enabled)')
 def search(query, top_k, threshold, rerank, explain):
-    from core.config import get_search_config
+    from core.config import get_search_config, get_watch_dirs, PARSED_DOCS_DIR
+    from core.utils.path_resolver import PathResolver
     
     context_manager = initialize_system()
     
@@ -939,6 +940,24 @@ def search(query, top_k, threshold, rerank, explain):
         console.print(t("search_empty"))
         return
     
+    # Initialize PathResolver and resolve paths for all results
+    path_resolver = PathResolver({
+        'watch_dirs': get_watch_dirs(),
+        'parsed_docs_dir': PARSED_DOCS_DIR
+    })
+    
+    for res in results:
+        filename = res.get('filename', 'Unknown')
+        uri = res.get('uri', 'Unknown')
+        try:
+            full_content_path = path_resolver.resolve_path(filename, uri)
+            res['full_content_path'] = full_content_path
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to resolve path for {filename}: {e}")
+            res['full_content_path'] = ""
+    
     # Display status message
     if rerank:
         console.print("✨ Advanced reranking applied (BM25 + Keywords + Position)")
@@ -958,6 +977,7 @@ def _display_simple_results(results: list):
         abstract = res.get('abstract', '')
         excerpts = res.get('relevant_excerpts', [])
         score = res.get('score', 0.0)
+        full_content_path = res.get('full_content_path', '')
         
         # Combine abstract and excerpts for simple display
         if not abstract and not excerpts:
@@ -969,12 +989,19 @@ def _display_simple_results(results: list):
                 excerpts_part = f"\n\n{t('search_excerpts_label')}\n" + "\n".join([f"- {e}" for e in excerpts])
             content = abstract_part + excerpts_part
         
+        # Add path information
+        path_info = ""
+        if full_content_path:
+            path_info = f"\n📂 Path: {full_content_path}"
+        else:
+            path_info = "\n📂 Path: Not available"
+        
         console.print(t("search_result_item_numbered", 
                        idx=idx, 
                        source=source, 
                        score=score, 
                        line="-"*40, 
-                       content=content.strip()))
+                       content=content.strip() + path_info))
 
 def _display_explainable_results(query: str, results: list):
     """Display search results with detailed explanations"""
@@ -983,9 +1010,17 @@ def _display_explainable_results(query: str, results: list):
         abstract = res.get('abstract', '')
         excerpts = res.get('relevant_excerpts', [])
         score = res.get('score', 0.0)
+        full_content_path = res.get('full_content_path', '')
         
         # Display header
         console.print(f"\n[bold cyan]#{idx}[/bold cyan] 📄 [bold]Source:[/bold] {source}")
+        
+        # Display path
+        if full_content_path:
+            console.print(f"   📂 [bold]Path:[/bold] {full_content_path}")
+        else:
+            console.print(f"   📂 [bold]Path:[/bold] Not available")
+        
         console.print(f"   [green]✅ Match Score: {score*100:.1f}%[/green]")
         
         # Check if we have advanced score breakdown

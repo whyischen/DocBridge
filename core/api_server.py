@@ -5,8 +5,9 @@ import os
 from pathlib import Path
 
 from core.factories import initialize_system
-from core.config import get_watch_dirs, add_watch_dir, remove_watch_dir, CONFIG, save_config
+from core.config import get_watch_dirs, add_watch_dir, remove_watch_dir, CONFIG, save_config, PARSED_DOCS_DIR
 from core.watcher import index_all
+from core.utils.path_resolver import PathResolver
 
 app = FastAPI(
     title="ContextBridge Local API",
@@ -38,6 +39,7 @@ class SearchResult(BaseModel):
     relevant_excerpts: List[str]
     score: float
     metadata: Dict[str, Any] = {}
+    full_content_path: str = ""  # Path to full document content
 
 class SearchResponse(BaseModel):
     results: List[SearchResult]
@@ -72,6 +74,12 @@ async def search_documents(request: SearchRequest):
             explain=request.explain
         )
         
+        # Initialize PathResolver
+        path_resolver = PathResolver({
+            'watch_dirs': get_watch_dirs(),
+            'parsed_docs_dir': PARSED_DOCS_DIR
+        })
+        
         formatted_results = []
         for res in results:
             # Extract metadata if explain mode is enabled
@@ -84,13 +92,27 @@ async def search_documents(request: SearchRequest):
                 if 'query_terms' in res:
                     metadata['query_terms'] = res['query_terms']
             
+            # Resolve file path
+            filename = res.get('filename', 'Unknown')
+            uri = res.get('uri', 'Unknown')
+            full_content_path = ""
+            
+            try:
+                full_content_path = path_resolver.resolve_path(filename, uri)
+            except Exception as e:
+                # Log error but continue with other results
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to resolve path for {filename}: {e}")
+            
             formatted_results.append(SearchResult(
-                uri=res.get('uri', 'Unknown'),
-                filename=res.get('filename', 'Unknown'),
+                uri=uri,
+                filename=filename,
                 abstract=res.get('abstract', ''),
                 relevant_excerpts=res.get('relevant_excerpts', []),
                 score=res.get('score', 0.0),
-                metadata=metadata
+                metadata=metadata,
+                full_content_path=full_content_path
             ))
             
         return SearchResponse(results=formatted_results)
