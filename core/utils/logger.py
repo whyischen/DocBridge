@@ -23,7 +23,7 @@ class RichTagStrippingFormatter(logging.Formatter):
         message = super().format(record)
         return strip_rich_tags(message)
 
-def setup_logger(name="cbridge", log_dir=None, level=logging.DEBUG):
+def setup_logger(name="cbridge", log_dir=None, level=logging.INFO):
     """
     Configure and return a global base Logger.
     Handles both console output (via Rich) and rotating file logs.

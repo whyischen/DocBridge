@@ -31,15 +31,15 @@ def initialize_system():
     if model_type == "gte-small-zh":
         try:
             from core.embeddings.gte_small_zh import GTESmallZhONNX
-            logger.info("🚀 Initializing GTE-Small-Zh ONNX embedding model...")
+            logger.debug("🚀 Initializing GTE-Small-Zh ONNX embedding model...")
             embedding_model = GTESmallZhONNX()
-            logger.info(f"✅ GTE-Small-Zh model loaded (dimension: {embedding_model.get_dimension()})")
+            logger.debug(f"✅ GTE-Small-Zh model loaded (dimension: {embedding_model.get_dimension()})")
         except Exception as e:
             logger.error(f"Failed to load GTE-Small-Zh model: {e}", exc_info=True)
             logger.warning("⚠️ Falling back to ChromaDB default embedding model")
             embedding_model = None
     elif model_type == "chromadb-default":
-        logger.info("Using ChromaDB default embedding model (ONNXMiniLM_L6_V2)")
+        logger.debug("Using ChromaDB default embedding model (ONNXMiniLM_L6_V2)")
         embedding_model = None
     else:
         logger.warning(f"Unknown embedding model type: {model_type}, using ChromaDB default")

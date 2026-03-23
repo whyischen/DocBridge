@@ -126,8 +126,9 @@ class OpenVikingManager(IContextManager):
             if min_similarity is None:
                 min_similarity = self.default_min_similarity
             
-            logger.debug(f"🔍 [OpenViking] Recursive Searching: {query}")
-            logger.debug(f"Parameters: top_k={top_k}, min_similarity={min_similarity}, rerank={enable_rerank}, explain={explain}")
+            if explain:
+                logger.debug(f"🔍 [OpenViking] Recursive Searching: {query}")
+                logger.debug(f"Parameters: top_k={top_k}, min_similarity={min_similarity}, rerank={enable_rerank}, explain={explain}")
             
             # Phase 1: 意图宽筛 (Search in L0 and L1)
             phase1_results = self.search_runtime.hybrid_search(
@@ -147,9 +148,10 @@ class OpenVikingManager(IContextManager):
                 logger.debug(f"No results passed Phase 1 similarity threshold ({min_similarity})")
                 return []
             
-            logger.debug(f"Phase 1: {len(phase1_results)} documents passed similarity threshold")
-            for res in phase1_results[:3]:
-                logger.debug(f"  - {res.get('metadata', {}).get('filename', 'unknown')}: score={res.get('score', 0.0):.3f}")
+            if explain:
+                logger.debug(f"Phase 1: {len(phase1_results)} documents passed similarity threshold")
+                for res in phase1_results[:3]:
+                    logger.debug(f"  - {res.get('metadata', {}).get('filename', 'unknown')}: score={res.get('score', 0.0):.3f}")
                 
             # 提取高相关度的 URI
             matched_uris = set()
@@ -220,7 +222,8 @@ class OpenVikingManager(IContextManager):
                 search_config = self.config.get("search", {})
                 optimizer_config = search_config.get("optimizer", {})
                 
-                logger.debug(f"✨ Applying advanced reranking (BM25 + Keywords + Position)")
+                if explain:
+                    logger.debug(f"✨ Applying advanced reranking (BM25 + Keywords + Position)")
                 results = SearchOptimizer.optimize_results(
                     query=query,
                     results=results,
