@@ -245,9 +245,11 @@ If you want to manually trigger an indexing process for all your monitored folde
 cbridge index
 \`\`\`
 
+> **Note:** The \`cbridge start\` command automatically indexes existing documents on startup, so manual indexing is only needed if you want to rebuild the index without restarting the service.
+
 ### 3. Start Search Engine (\`start\`)
 
-Start the background engine to watch directories in real-time and provide search capabilities:
+Start the background engine to watch directories in real-time and provide search capabilities. This command will automatically index all existing documents in monitored folders before starting the watcher:
 
 \`\`\`bash
 cbridge start
@@ -357,9 +359,11 @@ ContextBridge 支持智能目录监控功能，能自动感知所绑定文件夹
 cbridge index
 \`\`\`
 
+> **注意：** \`cbridge start\` 命令会在启动时自动索引现有文档，因此手动索引仅在需要重建索引而不重启服务时使用。
+
 ### 3. 启动检索引擎 (\`start\`)
 
-启动后台监控程序与核心搜索服务引擎：
+启动后台监控程序与核心搜索服务引擎。此命令会在启动监控前自动索引所有监控目录中的现有文档：
 
 \`\`\`bash
 cbridge start
