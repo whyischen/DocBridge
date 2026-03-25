@@ -2,7 +2,7 @@
 
 # ContextBridge (cbridge-agent)
 
-> **Connect AI Agentsto your Local Documents**
+> **Connect AI Agents to your Local Documents**
 >
 > Local knowledge base for OpenClaw, Cursor and AI assistants. Read your documents instantly—Word, Excel, PDF. No uploads. Privacy first.
 
@@ -16,8 +16,9 @@
 
 Native skills for ContextBridge [local-context-bridge](https://clawhub.ai/whyischen/local-context-bridge)  are available on [clawhub.ai](https://clawhub.ai/).
 
-- [`openclaw_skills/local-context-bridge`](openclaw_skills/local-context-bridge/) - For English language environments
-- [`openclaw_skills/local-context-bridge-cn`](openclaw_skills/local-context-bridge-cn/) - For Chinese language environments
+```bash
+clawhub install local-context-bridge
+```
 
 Once installed, OpenClaw will automatically detect ContextBridge — no additional configuration needed to search your local documents.
 
@@ -58,12 +59,15 @@ cbridge search ContextBridge
 ContextBridge uses a three-tier progressive retrieval architecture to ensure AI can precisely locate document content:
 
 ### L0 Layer: Document Abstract
+
 Automatically extracts document title and first paragraph core content for quick relevance assessment.
 
 ### L1 Layer: Structural Outline
+
 Parses document heading hierarchy (H1-H3) to build a complete content navigation map.
 
 ### L2 Layer: Semantic Chunking
+
 - Default chunk size: 800 characters
 - Smart overlap: 150 characters (maintains context continuity)
 - Paragraph-aware: Splits at natural paragraph boundaries to avoid semantic fragmentation
