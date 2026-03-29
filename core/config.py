@@ -1,8 +1,9 @@
 import os
 import yaml
 from pathlib import Path
+from core.platform import platform_compat
 
-CONFIG_PATH = Path(os.path.expanduser("~/.cbridge/config.yaml"))
+CONFIG_PATH = platform_compat.get_config_dir() / "config.yaml"
 
 def load_config():
     # Ensure config directory exists

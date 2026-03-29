@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple, Any, Union
 from core.utils.logger import get_logger
 from core.i18n import t
+from core.platform import platform_compat
 
 logger = get_logger("process")
 
@@ -18,7 +19,7 @@ def is_process_running(pid: int) -> bool:
     if pid <= 0:
         return False
         
-    if sys.platform == "win32":
+    if platform_compat.is_windows():
         try:
             # Use tasklist with specific PID filter
             result = subprocess.run(
@@ -66,7 +67,7 @@ def start_background_process(cmd_args: Union[str, List[str]], pid_file: Path, lo
     pid_file.parent.mkdir(parents=True, exist_ok=True)
     
     # Check for pythonw on Windows (specifically for hiding windows)
-    if sys.platform == "win32" and isinstance(cmd_args, list):
+    if platform_compat.is_windows() and isinstance(cmd_args, list):
         if cmd_args[0].endswith("python.exe"):
             pythonw = cmd_args[0].replace("python.exe", "pythonw.exe")
             if os.path.exists(pythonw):
@@ -74,34 +75,16 @@ def start_background_process(cmd_args: Union[str, List[str]], pid_file: Path, lo
 
     with open(log_path, "a", encoding="utf-8") as f:
         try:
-            if sys.platform == "win32":
-                # Most robust way to start a truly invisible background process on Windows
-                si = subprocess.STARTUPINFO()
-                si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                si.wShowWindow = 0 # SW_HIDE
-                
-                # If it's a list, shell=False is quieter
-                use_shell = isinstance(cmd_args, str)
-                
-                process = subprocess.Popen(
-                    cmd_args,
-                    stdout=f,
-                    stderr=f,
-                    # Combine flags for maximum concealment and separation
-                    creationflags=subprocess.CREATE_NO_WINDOW | 
-                                 subprocess.DETACHED_PROCESS | 
-                                 subprocess.CREATE_NEW_PROCESS_GROUP,
-                    startupinfo=si,
-                    shell=use_shell
-                )
-            else:
-                process = subprocess.Popen(
-                    cmd_args,
-                    stdout=f,
-                    stderr=f,
-                    preexec_fn=os.setsid,
-                    shell=isinstance(cmd_args, str)
-                )
+            # Use platform compatibility layer for subprocess flags
+            flags = platform_compat.get_subprocess_flags()
+            
+            process = subprocess.Popen(
+                cmd_args,
+                stdout=f,
+                stderr=f,
+                shell=isinstance(cmd_args, str),
+                **flags
+            )
             
             pid = process.pid
             pid_file.write_text(str(pid))
@@ -124,7 +107,7 @@ def stop_background_process(pid_file: Path) -> bool:
         return False
         
     try:
-        if sys.platform == "win32":
+        if platform_compat.is_windows():
             subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], 
                          capture_output=True, check=False)
         else:

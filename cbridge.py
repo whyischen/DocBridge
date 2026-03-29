@@ -25,6 +25,7 @@ from core.utils.process import (
     get_process_status, WATCHER_PID_FILE, SERVE_PID_FILE
 )
 from core.utils.logger import setup_logger, get_logger
+from core.platform import platform_compat
 
 # Initialize logger and console
 setup_logger()
@@ -231,9 +232,9 @@ def logs(follow, lines, service):
         console.print(t("logs_exit_hint"))
         try:
             import subprocess
-            # tail -f equivalent
-            process = subprocess.Popen(['powershell', '-Command', f'Get-Content "{log_path}" -Wait -Tail {lines}'], 
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            # Platform-specific log following command
+            cmd = platform_compat.get_follow_logs_command(Path(log_path), lines)
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             for line in process.stdout:
                 print(line, end='')
         except KeyboardInterrupt:

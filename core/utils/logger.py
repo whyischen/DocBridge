@@ -5,9 +5,10 @@ import re
 from pathlib import Path
 from rich.console import Console
 from rich.logging import RichHandler
+from core.platform import platform_compat
 
 # Default log directory
-DEFAULT_LOG_DIR = Path.home() / ".cbridge" / "logs"
+DEFAULT_LOG_DIR = platform_compat.get_log_dir()
 
 def strip_rich_tags(text):
     """Remove Rich color tags, used for log file output."""
