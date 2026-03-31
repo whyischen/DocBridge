@@ -1,127 +1,113 @@
 ---
 name: local-context-bridge
-description: "使用语义关键词搜索本地个人和内部文档(Word/Excel/PDF/Markdown)。当用户询问本地文件、私人数据或内部知识时使用此工具。它会返回高度相关的文本片段和文件路径。注意：始终使用提取的核心实体作为关键词，而不是完整句子。"
-metadata: { openclaw: { emoji: "🌉", requires: { bins: [pip] } } }
+description: 通过 ContextBridge CLI 搜索本地文档（PDF/Word/Excel/Markdown）。使用场景：(1) 用户询问本地文件中的具体数据/事实（如"2024 预算是多少"）; (2) 需要基于内部政策/流程/模板回答问题; (3) 用户明确要求搜索本地文档; (4) 涉及非通用知识的私人信息检索。核心原则：先搜索 ContextBridge 再回答。
+metadata: { "openclaw": { "emoji": "🌉", "requires": { "bins": ["cbridge"] } } }
 ---
-# ContextBridge 知识库
 
-## 📚 工作原理
+# ContextBridge 本地知识库
 
-ContextBridge 为 OpenClaw 提供对你本地文档（Word、Excel、PDF、Markdown）的即时检索能力。
-
-1. 本地索引：扫描文档并将文本切分为文本块。
-2. 向量化：使用本地 AI 嵌入模型将文本转换为语义向量。
-3. 语义搜索：从知识库中匹配最相关的文本块。
+通过 `cbridge` CLI 搜索本地文档的语义内容。所有数据保留在本地，100% 隐私安全。
 
 ---
 
-## 🚀 下载安装
+## 🚀 快速启动
 
-cbridge 安装与初始化流程
-
-```mermaid
-flowchart TD
-    A([开始]) --> B{已安装 cbridge？\ncbridge --version}
-
-    B -- 是 --> C[检测更新\ncbridge update]
-    C --> D{需要重新初始化？\n询问用户}
-    D -- 是 --> E[重新初始化配置\ncbridge init]
-    D -- 否 --> G
-    E --> G
-
-    B -- 否 --> F1[说明需安装 ContextBridge\n用于监控本地目录、向量化文件]
-    F1 --> F2[说明工作目录\n创建 ~/.cbridge 保存工作文件]
-    F2 --> F3[获取用户授权\n自动完成下载与初始化]
-    F3 --> G
-
-    G[配置完成\n通过 cbridge 与 ContextBridge 交互] --> H[运行内置 Demo\ncbridge search ContextBridge]
-    H --> I([结束])
-```
-
-### 1. 下载
-
-> 🔓 **开源可信**：`cbridge-agent` 完全开源，代码托管于 [GitHub](https://github.com/whyischen/context-bridge)，可审计验证，本地运行无数据泄露风险。
+### 1. 安装（首次）
 
 ```bash
 pip install cbridge-agent
 ```
 
-### 2. 初始化配置
+### 2. 初始化（首次）
 
 ```bash
 cbridge init
 ```
 
-因为软件主要为 AI 工具调用，推荐用户全部使用默认配置
-
-### 3. 添加文档
+### 3. 添加监控目录
 
 ```bash
-cbridge watch add /path/to/your/documents
-cbridge watch list    # 查看已监听文件夹
+cbridge watch add /path/to/documents
+cbridge watch list
 ```
 
-### 4. 运行测试 demo
+### 4. 搜索
 
 ```bash
-cbridge search ContextBridge    # 搜索内置测试文档
+cbridge search <关键词>
+```
+
+---
+
+## 🎯 核心工作流
+
+```mermaid
+flowchart TD
+    A([用户提问]) --> B{涉及本地/私人知识？}
+    B -- 否 --> C[直接回答]
+    B -- 是 --> D[提取核心关键词]
+    D --> E[cbridge search <关键词>]
+    E --> F{找到结果？}
+    F -- 否 --> G[扩大关键词范围重试]
+    G --> F
+    F -- 是 --> H[评估片段是否足够]
+    H -- 足够 --> I[基于片段回答 + 引用来源]
+    H -- 不足 --> J[读取完整文档后回答]
+    I --> K([结束])
+    J --> K
 ```
 
 ---
 
 ## 💡 搜索最佳实践
 
-1. 尽量做到无感使用，根据用户语义判断使用调用 `cbridge seatch` 检索本地内容
-2. `cbridge seatch` 会返回与搜索相关的**文档片段**以及**文档路径**，根据文档片段**判断是否需要获取文档全部内容**。
-
-### 什么时候使用 ContextBridge
-
-1. 分析用户所提到的资料可能是内部资料时
-2. 用户明确提出查看本地文档时
-
 ### 关键词提取
 
-- 推荐：提取核心实体
-  - `2024 marketing budget` ✅
-- 不推荐：使用完整句子
-  - `What was the budget for 2024 marketing` ❌
+| 推荐 ✅ | 避免 ❌ |
+|---------|--------|
+| `2024 营销预算` | `2024 年的营销预算是多少？` |
+| `采购政策` | `我们公司的采购政策是什么` |
+| `Python 编码规范` | `帮我找找 Python 的编码规范` |
 
-### 迭代搜索
+### 迭代策略
 
-1. 先用精准关键词
-2. 若无结果，扩大查询范围
-3. 尝试同义词或相关术语
+1. **精确关键词** → 无结果 → **扩大范围**
+2. 尝试同义词或相关术语
+3. 最多重试 2-3 次
 
----
+### 引用要求
 
-## 📖 CLI 命令
-
-```bash
-# 初始化
-cbridge init                 # 初始化工作区
-cbridge lang en              # 切换语言
-
-# 文档管理
-cbridge watch add path     # 添加文件夹
-cbridge watch remove path  # 移除文件夹
-cbridge watch list           # 列出文件夹
-cbridge index                # 手动重建索引
-
-# 服务控制
-cbridge start                # 启动服务
-cbridge serve                # 仅启动 API
-cbridge stop                 # 停止服务
-cbridge status               # 查看状态
-cbridge logs                 # 查看日志
-
-# 搜索
-cbridge search query       # 搜索文档
-```
+始终标注来源：
+- "根据 `budget.xlsx` 的内容..."
+- "如 `employee_handbook.pdf` 所述..."
 
 ---
 
-## 📚 资源链接
+## 📋 完整命令参考
 
-- GitHub：[whyischen/context-bridge](https://github.com/whyischen/context-bridge)
-- 配置文件：`~.cbridgeconfig.yaml`
-- 工作区：`~.cbridgeworkspace`
+详见 [`references/cli-reference.md`](references/cli-reference.md)
+
+---
+
+## 🤖 自动化脚本
+
+| 脚本 | 用途 | 命令 |
+|------|------|------|
+| `search.py` | 语义搜索（带重试） | `python scripts/search.py "关键词"` |
+| `health-check.py` | 健康检查 | `python scripts/health-check.py` |
+| `sync-index.py` | 强制同步索引 | `python scripts/sync-index.py` |
+| `add-watch.py` | 添加监控目录 | `python scripts/add-watch.py <path>` |
+
+---
+
+## 🔧 故障排查
+
+详见 [`references/troubleshooting.md`](references/troubleshooting.md)
+
+---
+
+## 📚 资源
+
+- **GitHub**: <https://github.com/whyischen/context-bridge>
+- **配置**: `~/.cbridge/config.yaml`
+- **工作区**: `~/.cbridge/workspace`

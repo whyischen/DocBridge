@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import uuid
 from typing import List, Dict, Any
@@ -23,8 +24,15 @@ class OpenVikingManager(IContextManager):
         self.default_min_similarity = search_config.get("min_similarity", 0.5)
         self.default_top_k = search_config.get("default_top_k", 5)
         
+        # Load chunking configuration
+        chunking_config = config.get("chunking", {})
+        self.chunk_size = chunking_config.get("chunk_size", 800)
+        self.chunk_overlap = chunking_config.get("chunk_overlap", 150)
+        self.use_hybrid_splitter = chunking_config.get("use_hybrid_splitter", False)
+        
         logger.debug(f"Initializing embedded OpenViking manager, mount path: {self.mount_path}")
         logger.debug(f"Search config: min_similarity={self.default_min_similarity}, default_top_k={self.default_top_k}")
+        logger.debug(f"Chunking config: chunk_size={self.chunk_size}, chunk_overlap={self.chunk_overlap}, hybrid={self.use_hybrid_splitter}")
 
     def _generate_l0_abstract(self, content: str) -> str:
         # 兼容保留原有 API 形式，但不再使用
@@ -40,13 +48,19 @@ class OpenVikingManager(IContextManager):
             
             logger.debug(f"📝 [OpenViking] Processing chunked context: {uri}")
             
-            from core.utils.text_processor import HeuristicExtractor, MarkdownTextSplitter
-            import hashlib
+            from core.utils.text_processor import HeuristicExtractor, MarkdownTextSplitter, get_hybrid_splitter, get_enhanced_extractor
             
-            l0_abstract = HeuristicExtractor.extract_l0_abstract(filename, content)
-            l1_overview = HeuristicExtractor.extract_l1_outline(content)
+            # 根据配置选择提取器
+            if self.use_hybrid_splitter:
+                extractor = get_enhanced_extractor()
+                l0_abstract = extractor.extract_l0_abstract(filename, content)
+                l1_overview = extractor.extract_l1_outline(content)
+                splitter = get_hybrid_splitter(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
+            else:
+                l0_abstract = HeuristicExtractor.extract_l0_abstract(filename, content)
+                l1_overview = HeuristicExtractor.extract_l1_outline(content)
+                splitter = MarkdownTextSplitter(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
             
-            splitter = MarkdownTextSplitter(chunk_size=800, chunk_overlap=150)
             chunks = splitter.split_text(content)
             
             doc_ids = []

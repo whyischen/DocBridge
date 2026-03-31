@@ -48,6 +48,14 @@ def load_config():
             # Update min_similarity if it's still at old default
             if config["search"].get("min_similarity", 0.5) == 0.5:
                 config["search"]["min_similarity"] = 0.3
+            # Ensure chunking config has defaults
+            if "chunking" not in config:
+                config["chunking"] = {
+                    "chunk_size": 800,
+                    "chunk_overlap": 150,
+                    "use_hybrid_splitter": False
+                }
+
             return config
     return {
         "mode": "embedded", 
@@ -60,6 +68,12 @@ def load_config():
             "default_top_k": 5,
             "optimizer": {
                 "semantic_weight": 0.40,
+        "chunking": {
+            "chunk_size": 800,
+            "chunk_overlap": 150,
+            "use_hybrid_splitter": False
+        },
+
                 "bm25_weight": 0.30,
                 "keyword_weight": 0.15,
                 "position_weight": 0.10,

@@ -2,6 +2,7 @@ import re
 from typing import List, Dict
 from core.i18n import t
 
+# 保持原有MarkdownTextSplitter以确保向后兼容
 class MarkdownTextSplitter:
     def __init__(self, chunk_size: int = 800, chunk_overlap: int = 150):
         self.chunk_size = chunk_size
@@ -38,6 +39,7 @@ class MarkdownTextSplitter:
             chunks.append("\n\n".join(current_chunk))
             
         return chunks
+
 
 class HeuristicExtractor:
     @staticmethod
@@ -104,3 +106,21 @@ class HeuristicExtractor:
         if len(full_outline) > 1000:
             return full_outline[:997] + "..."
         return full_outline
+
+
+# 导入混合分段器（如果需要的话，可以在运行时导入）
+def get_hybrid_splitter(chunk_size: int = 800, chunk_overlap: int = 150):
+    """
+    获取混合启发式分段器实例。
+    为了保持轻量级，默认不导入，只在需要时使用。
+    """
+    from core.utils.hybrid_text_splitter import HybridTextSplitter
+    return HybridTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+
+
+def get_enhanced_extractor():
+    """
+    获取增强版启发式提取器实例。
+    """
+    from core.utils.hybrid_text_splitter import EnhancedHeuristicExtractor
+    return EnhancedHeuristicExtractor
