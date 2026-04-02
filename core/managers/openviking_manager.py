@@ -48,20 +48,28 @@ class OpenVikingManager(IContextManager):
             
             logger.debug(f"📝 [OpenViking] Processing chunked context: {uri}")
             
-            from core.utils.text_processor import HeuristicExtractor, MarkdownTextSplitter, get_hybrid_splitter, get_enhanced_extractor
-            
             # 根据配置选择提取器
             if self.use_hybrid_splitter:
+                from core.utils.text_processor import get_enhanced_extractor, get_hybrid_splitter
                 extractor = get_enhanced_extractor()
                 l0_abstract = extractor.extract_l0_abstract(filename, content)
                 l1_overview = extractor.extract_l1_outline(content)
                 splitter = get_hybrid_splitter(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
+                chunks = splitter.split_text(content)
             else:
-                l0_abstract = HeuristicExtractor.extract_l0_abstract(filename, content)
-                l1_overview = HeuristicExtractor.extract_l1_outline(content)
-                splitter = MarkdownTextSplitter(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
+                # 使用策略特定的提取器（一站式）
+                from core.utils.text_processor import extract_with_strategy
+                
+                chunk_strategy_name = self.config.get("chunking", {}).get("strategy", None)
+                l0_abstract, l1_overview, chunks = extract_with_strategy(
+                    filename=filename,
+                    content=content,
+                    strategy=chunk_strategy_name,
+                    chunk_size=self.chunk_size,
+                    chunk_overlap=self.chunk_overlap
+                )
             
-            chunks = splitter.split_text(content)
+            logger.debug(f"Extracted: L0={len(l0_abstract)} chars, L1={len(l1_overview)} chars, L2={len(chunks)} chunks")
             
             doc_ids = []
             vectors = []

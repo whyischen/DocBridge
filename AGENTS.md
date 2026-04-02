@@ -29,7 +29,8 @@ context-bridge/
 │   │   ├── context_manager.py    # 上下文管理接口
 │   │   ├── parser.py             # 解析器接口
 │   │   ├── search_runtime.py     # 搜索运行时接口
-│   │   └── embedding_model.py    # 嵌入模型接口
+│   │   ├── embedding_model.py    # 嵌入模型接口
+│   │   └── chunk_strategy_manager.py # 分块策略管理器接口
 │   ├── managers/                 # 管理器实现
 │   │   └── openviking_manager.py # OpenViking 管理器
 │   ├── parsers/                  # 解析器实现
@@ -42,7 +43,10 @@ context-bridge/
 │   │   └── qmd_runtime.py        # QMD 运行时
 │   └── utils/                    # 工具函数
 │       ├── logger.py             # 日志工具
-│       └── model_downloader.py   # 模型下载工具
+│       ├── model_downloader.py   # 模型下载工具
+│       ├── text_processor.py     # 文本分割器（统一接口，L2 分割）
+│       ├── text_extractor.py     # 文本提取器（L0 摘要、L1 大纲提取）
+│       └── chunk_strategy_manager.py # 分块策略管理器（L2 分割策略 + L0/L1 提取，线程安全）
 ├── cbridge.py                    # CLI 入口点
 ├── src                           # 前端页面
 ├── main.py                       # 主程序入口
