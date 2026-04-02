@@ -334,57 +334,64 @@ class SemanticChunkStrategy(BaseChunkStrategy):
         if not text:
             return []
         
-        # 1. 分割句子
-        sentences = self._split_sentences(text)
-        if len(sentences) <= 1:
-            return [text]
-        
-        # 2. 添加上下文窗口
-        combined_sentences = self._combine_sentences(sentences)
-        
-        # 3. 生成嵌入
-        model = self._get_embedding_model()
-        embeddings = model.embed_batch(combined_sentences)
-        
-        # 4. 计算余弦距离
-        distances = self._calculate_cosine_distances(embeddings)
-        
-        # 5. 确定分块边界
-        if use_percentile:
-            import numpy as np
-            threshold = np.percentile(distances, percentile_threshold)
-        else:
-            threshold = similarity_threshold
-        
-        breakpoint_indices = [i for i, dist in enumerate(distances) if dist > threshold]
-        
-        # 6. 创建分块
-        chunks = []
-        start_idx = 0
-        
-        for bp_idx in breakpoint_indices:
-            chunk_sentences = sentences[start_idx:bp_idx + 1]
-            chunk_text = ' '.join(chunk_sentences)
+        try:
+            # 1. 分割句子
+            sentences = self._split_sentences(text)
+            if len(sentences) <= 1:
+                return [text]
             
-            # 如果分块过大，进一步分割
-            if len(chunk_text) > chunk_size:
-                sub_chunks = self._split_large_chunk(chunk_text, chunk_size, chunk_overlap)
-                chunks.extend(sub_chunks)
-            else:
-                chunks.append(chunk_text)
+            # 2. 添加上下文窗口
+            combined_sentences = self._combine_sentences(sentences)
             
-            start_idx = bp_idx + 1
-        
-        # 添加最后一个分块
-        if start_idx < len(sentences):
-            chunk_text = ' '.join(sentences[start_idx:])
-            if len(chunk_text) > chunk_size:
-                sub_chunks = self._split_large_chunk(chunk_text, chunk_size, chunk_overlap)
-                chunks.extend(sub_chunks)
+            # 3. 生成嵌入
+            model = self._get_embedding_model()
+            embeddings = model.embed_batch(combined_sentences)
+            
+            # 4. 计算余弦距离
+            distances = self._calculate_cosine_distances(embeddings)
+            
+            # 5. 确定分块边界
+            if use_percentile:
+                import numpy as np
+                threshold = np.percentile(distances, percentile_threshold)
             else:
-                chunks.append(chunk_text)
-        
-        return [c for c in chunks if c.strip()]
+                threshold = similarity_threshold
+            
+            breakpoint_indices = [i for i, dist in enumerate(distances) if dist > threshold]
+            
+            # 6. 创建分块
+            chunks = []
+            start_idx = 0
+            
+            for bp_idx in breakpoint_indices:
+                chunk_sentences = sentences[start_idx:bp_idx + 1]
+                chunk_text = ' '.join(chunk_sentences)
+                
+                # 如果分块过大，进一步分割
+                if len(chunk_text) > chunk_size:
+                    sub_chunks = self._split_large_chunk(chunk_text, chunk_size, chunk_overlap)
+                    chunks.extend(sub_chunks)
+                else:
+                    chunks.append(chunk_text)
+                
+                start_idx = bp_idx + 1
+            
+            # 添加最后一个分块
+            if start_idx < len(sentences):
+                chunk_text = ' '.join(sentences[start_idx:])
+                if len(chunk_text) > chunk_size:
+                    sub_chunks = self._split_large_chunk(chunk_text, chunk_size, chunk_overlap)
+                    chunks.extend(sub_chunks)
+                else:
+                    chunks.append(chunk_text)
+            
+            return [c for c in chunks if c.strip()]
+            
+        except Exception as e:
+            logger.warning(f"Semantic chunking failed, falling back to paragraph chunking: {e}")
+            # 降级到段落分割
+            fallback = ParagraphChunkStrategy(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+            return fallback.split(text, **kwargs)
     
     def _split_large_chunk(self, text: str, chunk_size: int, chunk_overlap: int) -> List[str]:
         """对超大分块按字符级别分割"""

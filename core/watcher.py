@@ -3,20 +3,20 @@ import os
 import queue
 import threading
 import re
+import json
+import socket
+import gc
+import warnings
 from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 from pathlib import Path
 from rich.console import Console
-from core.config import RAW_DOCS_DIR, PARSED_DOCS_DIR, get_watch_dirs, CONFIG, add_watch_dir, remove_watch_dir
-from core.parser import parse_document, SUPPORTED_EXTENSIONS
-import json
-import socket
-import gc
+from tqdm import tqdm
+
 from core.config import RAW_DOCS_DIR, PARSED_DOCS_DIR, get_watch_dirs, CONFIG, add_watch_dir, remove_watch_dir
 from core.parser import parse_document, SUPPORTED_EXTENSIONS
 from core.factories import initialize_system
 from core.utils.model_cache import get_global_model_cache
-from tqdm import tqdm
 from core.i18n import t
 from core.utils.logger import get_logger
 
@@ -26,7 +26,7 @@ logger = get_logger("watcher")
 _context_manager = None
 _model_lock = threading.Lock()
 # RPC Configuration (local only)
-RPC_PORT = float(CONFIG.get("watcher", {}).get("rpc_port", 11405))
+RPC_PORT = int(CONFIG.get("watcher", {}).get("rpc_port", 11405))
 
 def get_cm():
     """Thread-safe lazy initializer for the context manager."""
@@ -41,17 +41,6 @@ def get_cm():
             logger.info("Initializing context manager in Watcher process...")
             _context_manager = initialize_system()
         return _context_manager
-
-def _idle_cleanup_loop():
-    """
-    后台清理循环已移至 ModelCache 类中
-    此函数保留用于向后兼容，但实际清理由 ModelCache 处理
-    """
-    # 模型缓存清理现在由 core.utils.model_cache.ModelCache 自动处理
-    # 10 分钟空闲后自动卸载模型
-    while True:
-        time.sleep(300)  # 每 5 分钟检查一次（降低频率）
-        # 不需要做任何事情，ModelCache 会自动处理
 
 def _rpc_server_loop():
     """Lightweight internal RPC server for CLI search requests."""
@@ -131,6 +120,7 @@ elif PERFORMANCE_MODE == "balanced":
 # Global task queue for asynchronous parsing with size limit
 task_queue = queue.Queue(maxsize=MAX_QUEUE_SIZE)
 _last_modified_times = {}
+_file_state_lock = threading.Lock()
 
 # 资源监控
 _resource_monitor = {
@@ -138,6 +128,7 @@ _resource_monitor = {
     "large_file_skips": 0,
     "last_check": 0
 }
+_resource_lock = threading.Lock()
 
 def _worker_loop():
     """Background worker to process files from the queue."""
@@ -185,8 +176,6 @@ class DocumentHandler(FileSystemEventHandler):
         self.context_manager = context_manager
 
     def _queue_task(self, file_path, event_type):
-        global _resource_monitor  # 必须在函数开头声明
-        
         path = Path(file_path)
         if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
             return
@@ -216,7 +205,8 @@ class DocumentHandler(FileSystemEventHandler):
         try:
             file_size_mb = path.stat().st_size / 1024 / 1024
             if file_size_mb > MAX_FILE_SIZE_MB:
-                _resource_monitor["large_file_skips"] += 1
+                with _resource_lock:
+                    _resource_monitor["large_file_skips"] += 1
                 logger.warning(t("watch_skip_large_file", name=path.name, size=file_size_mb, max_size=MAX_FILE_SIZE_MB))
                 return
         except (FileNotFoundError, PermissionError):
@@ -225,13 +215,15 @@ class DocumentHandler(FileSystemEventHandler):
         # Debounce logic for modify/create events
         if event_type in ["created", "modified"]:
             current_time = time.time()
-            last_time = _last_modified_times.get(str(path), 0)
-            if current_time - last_time < DEBOUNCE_SECONDS:
-                return  # Ignore event, debounced
-            _last_modified_times[str(path)] = current_time
+            with _file_state_lock:
+                last_time = _last_modified_times.get(str(path), 0)
+                if current_time - last_time < DEBOUNCE_SECONDS:
+                    return  # Ignore event, debounced
+                _last_modified_times[str(path)] = current_time
 
         if event_type == "deleted":
-            _last_modified_times.pop(str(path), None)
+            with _file_state_lock:
+                _last_modified_times.pop(str(path), None)
         else:
             ev_map = {"created": "create", "modified": "modify", "deleted": "delete"}
             ev_str = t(f"watch_ev_{ev_map.get(event_type, event_type)}")
@@ -239,7 +231,8 @@ class DocumentHandler(FileSystemEventHandler):
         
         # 检查队列是否已满
         if task_queue.full():
-            _resource_monitor["queue_drops"] += 1
+            with _resource_lock:
+                _resource_monitor["queue_drops"] += 1
             logger.warning(t("watch_queue_full", name=path.name))
             return
         
@@ -247,7 +240,8 @@ class DocumentHandler(FileSystemEventHandler):
         try:
             task_queue.put((event_type, file_path), block=False)
         except queue.Full:
-            _resource_monitor["queue_drops"] += 1
+            with _resource_lock:
+                _resource_monitor["queue_drops"] += 1
             logger.warning(t("watch_queue_full", name=path.name))
 
     def on_created(self, event):
@@ -265,8 +259,15 @@ class DocumentHandler(FileSystemEventHandler):
 def index_dir(directory: Path, show_progress=True, skip_scan_log=False):
     """Index a single directory and show progress."""
     import warnings
-    # Temporarily suppress general warnings like pydub to avoid spamming the progress bar
-    warnings.filterwarnings("ignore")
+    # Only suppress specific noisy warnings, not all warnings
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
+    # Suppress pydub warnings if pydub is installed
+    try:
+        import pydub
+        warnings.filterwarnings("ignore", module="pydub")
+    except ImportError:
+        pass
         
     context_manager = get_cm()
     all_files = []
@@ -400,10 +401,6 @@ def start_watching():
     rpc_thread = threading.Thread(target=_rpc_server_loop, daemon=True)
     rpc_thread.start()
     
-    # Start idle cleanup thread
-    cleanup_thread = threading.Thread(target=_idle_cleanup_loop, daemon=True)
-    cleanup_thread.start()
-    
     # 输出性能模式信息
     logger.info(t("watch_performance_mode", mode=PERFORMANCE_MODE.upper()))
     logger.info(t("watch_poll_interval", interval=POLL_INTERVAL))
@@ -484,10 +481,13 @@ def start_watching():
         for wt in worker_threads:
             wt.join()
         # 输出资源监控统计
-        if _resource_monitor["queue_drops"] > 0 or _resource_monitor["large_file_skips"] > 0:
+        with _resource_lock:
+            queue_drops = _resource_monitor["queue_drops"]
+            large_file_skips = _resource_monitor["large_file_skips"]
+        if queue_drops > 0 or large_file_skips > 0:
             logger.info(t("watch_resource_stats"))
-            logger.info(t("watch_queue_drops", count=_resource_monitor['queue_drops']))
-            logger.info(t("watch_large_file_skips", count=_resource_monitor['large_file_skips']))
+            logger.info(t("watch_queue_drops", count=queue_drops))
+            logger.info(t("watch_large_file_skips", count=large_file_skips))
 # ============================================================================
 # CLI Helper Wrappers
 # ============================================================================

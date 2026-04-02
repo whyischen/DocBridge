@@ -2,54 +2,12 @@
 文本分割器
 提供文本分割的统一接口和工具函数
 """
-import re
 from typing import List, Dict, Optional
 from core.interfaces.chunk_strategy_manager import IChunkStrategy
 from core.utils.chunk_strategy_manager import get_global_strategy_manager
 from core.utils.logger import get_logger
 
 logger = get_logger("text_processor")
-
-
-# 保持原有MarkdownTextSplitter以确保向后兼容
-class MarkdownTextSplitter:
-    """向后兼容的 Markdown 文本分割器"""
-    
-    def __init__(self, chunk_size: int = 800, chunk_overlap: int = 150):
-        self.chunk_size = chunk_size
-        self.chunk_overlap = chunk_overlap
-
-    def split_text(self, text: str) -> List[str]:
-        if not text:
-            return []
-            
-        # 按可能具有语义的段落分隔符切分
-        paragraphs = re.split(r'\n\s*\n', text)
-        chunks = []
-        current_chunk = []
-        current_length = 0
-
-        for p in paragraphs:
-            p = p.strip()
-            if not p:
-                continue
-                
-            p_len = len(p)
-            # 如果加上当前段落超出了 chunk_size，且当前 chunk 不为空，就把当前 chunk 存起来
-            if current_length + p_len > self.chunk_size and current_chunk:
-                chunks.append("\n\n".join(current_chunk))
-                # 实现简单的 overlap：尝试保留最后一个段落作为重叠内容（只要它不是太长）
-                overlap = current_chunk[-1] if current_chunk and len(current_chunk[-1]) <= self.chunk_overlap else ""
-                current_chunk = [overlap, p] if overlap else [p]
-                current_length = sum(len(x) for x in current_chunk) + (2 if overlap else 0)
-            else:
-                current_chunk.append(p)
-                current_length += p_len + (2 if len(current_chunk) > 1 else 0)
-
-        if current_chunk:
-            chunks.append("\n\n".join(current_chunk))
-            
-        return chunks
 
 
 def split_text(
@@ -166,27 +124,11 @@ def extract_with_strategy(
     return l0_abstract, l1_outline, chunks
 
 
-def get_hybrid_splitter(chunk_size: int = 800, chunk_overlap: int = 150):
-    """
-    获取混合启发式分段器实例
-    为了保持轻量级，默认不导入，只在需要时使用
-    """
-    from core.utils.hybrid_text_splitter import HybridTextSplitter
-    return HybridTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-
-
-# 为了向后兼容，从 text_extractor 导入提取器
-from core.utils.text_extractor import HeuristicExtractor, get_enhanced_extractor
-
 __all__ = [
-    "MarkdownTextSplitter",
     "split_text",
     "get_chunk_strategy",
     "list_available_strategies",
     "get_strategy_metadata",
     "extract_with_strategy",
-    "get_hybrid_splitter",
-    "HeuristicExtractor",
-    "get_enhanced_extractor",
 ]
 

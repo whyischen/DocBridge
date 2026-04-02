@@ -28,11 +28,10 @@ class OpenVikingManager(IContextManager):
         chunking_config = config.get("chunking", {})
         self.chunk_size = chunking_config.get("chunk_size", 800)
         self.chunk_overlap = chunking_config.get("chunk_overlap", 150)
-        self.use_hybrid_splitter = chunking_config.get("use_hybrid_splitter", False)
         
         logger.debug(f"Initializing embedded OpenViking manager, mount path: {self.mount_path}")
         logger.debug(f"Search config: min_similarity={self.default_min_similarity}, default_top_k={self.default_top_k}")
-        logger.debug(f"Chunking config: chunk_size={self.chunk_size}, chunk_overlap={self.chunk_overlap}, hybrid={self.use_hybrid_splitter}")
+        logger.debug(f"Chunking config: chunk_size={self.chunk_size}, chunk_overlap={self.chunk_overlap}")
 
     def _generate_l0_abstract(self, content: str) -> str:
         # 兼容保留原有 API 形式，但不再使用
@@ -48,26 +47,17 @@ class OpenVikingManager(IContextManager):
             
             logger.debug(f"📝 [OpenViking] Processing chunked context: {uri}")
             
-            # 根据配置选择提取器
-            if self.use_hybrid_splitter:
-                from core.utils.text_processor import get_enhanced_extractor, get_hybrid_splitter
-                extractor = get_enhanced_extractor()
-                l0_abstract = extractor.extract_l0_abstract(filename, content)
-                l1_overview = extractor.extract_l1_outline(content)
-                splitter = get_hybrid_splitter(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
-                chunks = splitter.split_text(content)
-            else:
-                # 使用策略特定的提取器（一站式）
-                from core.utils.text_processor import extract_with_strategy
-                
-                chunk_strategy_name = self.config.get("chunking", {}).get("strategy", None)
-                l0_abstract, l1_overview, chunks = extract_with_strategy(
-                    filename=filename,
-                    content=content,
-                    strategy=chunk_strategy_name,
-                    chunk_size=self.chunk_size,
-                    chunk_overlap=self.chunk_overlap
-                )
+            # 使用策略特定的提取器（一站式）
+            from core.utils.text_processor import extract_with_strategy
+            
+            chunk_strategy_name = self.config.get("chunking", {}).get("strategy", None)
+            l0_abstract, l1_overview, chunks = extract_with_strategy(
+                filename=filename,
+                content=content,
+                strategy=chunk_strategy_name,
+                chunk_size=self.chunk_size,
+                chunk_overlap=self.chunk_overlap
+            )
             
             logger.debug(f"Extracted: L0={len(l0_abstract)} chars, L1={len(l1_overview)} chars, L2={len(chunks)} chunks")
             

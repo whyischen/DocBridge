@@ -86,12 +86,3 @@ class HeuristicExtractor:
         if len(full_outline) > 1000:
             return full_outline[:997] + "..."
         return full_outline
-
-
-def get_enhanced_extractor():
-    """
-    获取增强版启发式提取器实例
-    为了保持轻量级，默认不导入，只在需要时使用
-    """
-    from core.utils.hybrid_text_splitter import EnhancedHeuristicExtractor
-    return EnhancedHeuristicExtractor

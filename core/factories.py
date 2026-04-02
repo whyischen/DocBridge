@@ -69,8 +69,8 @@ def initialize_system():
     
     # 3. 初始化全局分块策略管理器（注入嵌入模型）
     from core.utils.chunk_strategy_manager import set_global_strategy_manager, ChunkStrategyManager
-    chunk_config = CONFIG.get("chunk_strategy", {})
-    default_strategy = chunk_config.get("default", "semantic")
+    chunk_config = CONFIG.get("chunking", {})
+    default_strategy = chunk_config.get("strategy", "semantic")
     
     strategy_manager = ChunkStrategyManager(
         default_strategy=default_strategy,

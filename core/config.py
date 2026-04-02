@@ -54,7 +54,6 @@ def load_config():
                     "strategy": "semantic",  # 默认使用语义分块策略
                     "chunk_size": 800,
                     "chunk_overlap": 150,
-                    "use_hybrid_splitter": False,
                     "semantic": {
                         "use_percentile": True,
                         "percentile_threshold": 80
@@ -73,23 +72,21 @@ def load_config():
             "default_top_k": 5,
             "optimizer": {
                 "semantic_weight": 0.40,
-        "chunking": {
-            "strategy": "semantic",  # 默认使用语义分块策略
-            "chunk_size": 800,
-            "chunk_overlap": 150,
-            "use_hybrid_splitter": False,
-            "semantic": {
-                "use_percentile": True,
-                "percentile_threshold": 80
-            }
-        },
-
                 "bm25_weight": 0.30,
                 "keyword_weight": 0.15,
                 "position_weight": 0.10,
                 "title_weight": 0.05,
                 "bm25_k1": 1.5,
                 "bm25_b": 0.75
+            }
+        },
+        "chunking": {
+            "strategy": "semantic",  # 默认使用语义分块策略
+            "chunk_size": 800,
+            "chunk_overlap": 150,
+            "semantic": {
+                "use_percentile": True,
+                "percentile_threshold": 80
             }
         }
     }
